@@ -117,6 +117,7 @@ pub async fn get_log_context(
                         .unwrap_or_default()
                         .to_owned();
 
+
                     let message = source
                         .get("message")
                         .and_then(|v| v.as_array())

@@ -1,0 +1,11 @@
+[package]
+name = "filebeat_restful"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = "0.3.31"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9.34"
+env_logger = "0.11.6"
+log = "0.4.25"
