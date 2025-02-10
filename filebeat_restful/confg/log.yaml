@@ -1,0 +1,6 @@
+log_inputs:
+  - hostname: "machineA"
+    purpose:
+      - service_type: RTC
+        path:
+          - /Users/hanxiaoqing/log/agora/

@@ -63,8 +63,6 @@ async fn link_ws_server() {
 }
 
 
-
-
 pub async fn discover_node() -> impl Responder {
     link_ws_server().await;
 
