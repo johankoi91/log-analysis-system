@@ -6,7 +6,10 @@ use actix_web::{web, App, HttpServer};
 use actix_cors::Cors;
 use elasticsearch::{indices, Elasticsearch};
 use elasticsearch::http::transport::Transport;
-use routes::{search, context, unique_services, get_indices};
+use routes::{search, context, unique_services, get_indices, discover_node};
+use async_std::task;
+// use routes::websocket::{run};
+
 use env_logger;
 use log::error;
 
@@ -17,13 +20,14 @@ async fn main() -> std::io::Result<()> {
 
     info!("Starting Actix Web server...");
     let transport = Transport::single_node("http://localhost:9200").unwrap();
-    let client = Elasticsearch::new(transport);
-    // 使用 `Data::new` 包装客户端
-    let shared_client = web::Data::new(client);
+
+    let es_client = Elasticsearch::new(transport);
+    let data_es_client = web::Data::new(es_client);  // 使用 `Data::new` 包装客户端
 
     HttpServer::new(move || {
         App::new()
-            .app_data(shared_client.clone())
+            .app_data(data_es_client.clone())
+            // .app_data(data_wx_client.clone())
             // 添加 CORS 配置
             .wrap(
                 Cors::default()
@@ -36,12 +40,20 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_header()
                     .max_age(3600), // 缓存预检请求的时间（秒）
             )
+            // .route("/ws", web::get().to(websocket_entry)) // 注册 WebSocket 端点
             .configure(search::init_routes)
             .configure(context::init_routes)
             .configure(unique_services::init_routes)
             .configure(get_indices::init_routes)
+            .configure(discover_node::init_routes)
     })
         .bind("127.0.0.1:8080")?
         .run()
         .await
 }
+
+
+
+
+
+
