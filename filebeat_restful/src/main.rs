@@ -1,8 +1,12 @@
 pub mod websocket;
 use websocket::{WebSocketServer};
+use env_logger;
+use env_logger::Env;
+use log::error;
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     // 启动 WebSocket 服务器
     let mut ws = WebSocketServer::new();
 

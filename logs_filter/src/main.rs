@@ -4,14 +4,10 @@ use crate::env_logger::Env;
 use log::info;
 use actix_web::{web, App, HttpServer};
 use actix_cors::Cors;
-use elasticsearch::{indices, Elasticsearch};
+use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
 use routes::{search, context, unique_services, get_indices, discover_node};
-use async_std::task;
-// use routes::websocket::{run};
-
 use env_logger;
-use log::error;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

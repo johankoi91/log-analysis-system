@@ -1,6 +1,6 @@
 use actix_web::{web, Responder};
 use serde::Deserialize;
-use elasticsearch::{Elasticsearch, IndexParts, SearchParts};
+use elasticsearch::{Elasticsearch, SearchParts};
 use serde_json::json;
 
 #[derive(Deserialize)]

@@ -1,6 +1,5 @@
 use actix_web::{web, Responder};
-use serde::Deserialize;
-use elasticsearch::{Elasticsearch, IndexParts, cat::CatIndicesParts};
+use elasticsearch::{Elasticsearch, cat::CatIndicesParts};
 use serde_json::json;
 
 pub async fn get_indices(es: web::Data<Elasticsearch>) -> impl Responder {

@@ -76,23 +76,20 @@ impl WebSocketServer {
         Ok(())
     }
 
-
     fn get_files_in_directory(path: &str) -> Vec<String> {
-        read_dir(path)
-            .ok()
-            .into_iter()
-            .flat_map(|entries| {
+        fs::read_dir(path)
+            .and_then(|entries| {
                 entries
-                    .filter_map(Result::ok)
-                    .filter_map(|entry| entry.file_name().to_str().map(String::from))
-                    .collect::<Vec<String>>()
+                    .map(|entry| entry.map(|e| e.file_name().into_string().unwrap_or_default()))
+                    .collect()
             })
-            .collect()
+            .unwrap_or_default() // 如果出错，返回空 Vec
     }
+
     pub async fn run(&mut self) {
         let addr = "127.0.0.1:9002";
         let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-        info!("Listening on: {}", addr);
+        info!("websocket service is listening on: {}", addr);
 
         // 先加载配置
         if let Err(e) = self.load_config().await {
@@ -100,44 +97,19 @@ impl WebSocketServer {
             return;
         }
 
-        // 克隆 `self`，然后用 Arc<Mutex<Self>> 包装
-        let server_clone = self.clone();
-        let server_arc = Arc::new(Mutex::new(server_clone));
-
-        // 克隆 tx 以便传递给异步任务
         let tx_clone = self.tx.clone();
 
-        // 使用 async move，将 `self` 移入异步任务中
         tokio::spawn({
-            let config_clone = self.config.clone();
             async move {
                 loop {
                     tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
-                    // tokio::task::sleep(std::time::Duration::from_secs(4)).await;
-
-                    if let Some(config) = &config_clone {
-                        let log_files: Vec<LogFiles> = config.log_inputs.iter().map(|input| {
-                            let services = input.purpose.iter().map(|service| {
-                                ServiceFiles {
-                                    service_type: service.service_type.clone(),
-                                    log_files: service.path.iter().flat_map(|path| {
-                                        WebSocketServer::get_files_in_directory(path)
-                                    }).collect(),
-                                }
-                            }).collect();
-
-                            LogFiles {
-                                hostname: input.hostname.clone(),
-                                services,
-                            }
-                        }).collect();
-
-                        let json = serde_json::to_vec(&log_files).expect("Failed to serialize to JSON");
-                        let _ = tx_clone.send(Message::Binary(json));
-                    }
+                    let _ = tx_clone.send(Message::text("broadcast msg"));
                 }
             }
         });
+
+        let server_clone = self.clone();
+        let server_arc = Arc::new(Mutex::new(server_clone));
 
         while let Ok((stream, _)) = listener.accept().await {
             let peer = stream.peer_addr().expect("Connected streams should have a peer address");
@@ -156,7 +128,6 @@ impl WebSocketServer {
             });
         }
     }
-
 
 
     pub async fn accept_connection(
@@ -182,35 +153,72 @@ impl WebSocketServer {
         tx: Broadcaster,
     ) -> Result<()> {
         let ws_stream = accept_async(stream).await.expect("Failed to accept");
-        let ws_stream = Arc::new(Mutex::new(ws_stream));
+        let ws_stream = Arc::new(Mutex::new(ws_stream)); // Wrap WebSocketStream inside a Mutex
+
         info!("New WebSocket connection: {}", peer);
 
-        // 监听广播消息
-        let mut rx = tx.subscribe();
+        let mut clients_lock = clients.lock().await;
+        clients_lock.push(ws_stream.clone()); // Use Arc::clone to share the reference
 
-        // 存储客户端连接
-        {
-            let mut clients_lock = clients.lock().await;
-            clients_lock.push(Arc::clone(&ws_stream));
-        }
+        // Listen for broadcast messages
+        let mut rx = tx.subscribe();
 
         loop {
             tokio::select! {
-                Some(msg) = async {
-                    let mut ws_guard = ws_stream.lock().await; // 使用异步 Mutex
-                    ws_guard.next().await
-                } => {
-                    let msg = msg?;
-                    if msg.is_text() || msg.is_binary() {
-                        // 处理消息并广播
-                        let _ = tx.send(msg.clone());
-                    }
-                }
-                Ok(msg) = rx.recv() => {
-                    // 监听广播消息并转发给所有客户端
-                    self.broadcast_message(&clients, msg).await;
+            Some(msg) = async {
+                let mut ws_guard = ws_stream.lock().await; // Lock the WebSocketStream for mutable access
+                ws_guard.next().await
+            } => {
+                let msg = msg?;
+                self.handle_client_message(msg, peer, &tx, &ws_stream).await;
+            }
+            Ok(msg) = rx.recv() => {
+                // Listen for broadcast messages and forward them to all clients
+                self.broadcast_message(&clients, msg).await;
+            }
+        }
+        }
+    }
+
+
+
+    async fn handle_client_message(
+        &self,
+        msg: Message,
+        peer: SocketAddr,
+        tx: &Broadcaster,
+        client_ws: &Arc<Mutex<async_tungstenite::WebSocketStream<TcpStream>>>,
+    ) {
+        if msg.is_text() {
+            let text = msg.to_text().unwrap();
+            info!("Received text message from {}: {}", peer, text);
+
+            // 判断是否是 "get_log_source"
+            if text == "get_log_source" {
+                info!("Processing get_log_source from {} for get log files", peer);
+                if let Some(config) = &self.config {
+                    let log_files: Vec<LogFiles> = config.log_inputs.iter().map(|input| {
+                        let services = input.purpose.iter().map(|service| {
+                            ServiceFiles {
+                                service_type: service.service_type.clone(),
+                                log_files: service.path.iter().flat_map(|path| {
+                                    WebSocketServer::get_files_in_directory(path)
+                                }).collect(),
+                            }
+                        }).collect();
+                        LogFiles { hostname: input.hostname.clone(), services, }
+                    }).collect();
+
+                    let response_json = serde_json::to_string(&log_files).expect("Failed to serialize to JSON");
+                    let response_msg = Message::Text(response_json);
+                    // 发送消息给当前客户端
+                    let mut client_ws_guard = client_ws.lock().await;
+                    client_ws_guard.send(response_msg).await;
+                    return;
                 }
             }
+        } else if msg.is_binary() {
+            info!("Received binary message from {}", peer);
         }
     }
 

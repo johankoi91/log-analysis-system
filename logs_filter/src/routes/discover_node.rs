@@ -1,16 +1,10 @@
 use actix_web::{web, Responder};
-use serde::Deserialize;
-use elasticsearch::{Elasticsearch, IndexParts, cat::CatIndicesParts};
 use serde_json::json;
 use async_tungstenite::tungstenite::protocol::Message;
 use async_tungstenite::tokio::connect_async;
 use futures_util::{SinkExt, StreamExt};
 
-
-async fn link_ws_server() {
-    // WebSocket 服务器地址（例如使用 echo 服务）
-    let url = "ws://localhost:9002";
-
+async fn link_ws_server(url: &str) {
     // 建立 WebSocket 连接
     let (ws_stream, response) = connect_async(url)
         .await
@@ -21,7 +15,7 @@ async fn link_ws_server() {
     let (mut write, mut read) = ws_stream.split();
 
     // 发送一条文本消息
-    let send_text = "Hello, WebSocket!".to_string();
+    let send_text = "get_log_source".to_string();
     println!("Sending: {}", send_text);
     write
         .send(Message::Text(send_text))
@@ -64,10 +58,8 @@ async fn link_ws_server() {
 
 
 pub async fn discover_node() -> impl Responder {
-    link_ws_server().await;
-
+    link_ws_server("ws://localhost:9002").await;
     web::Json(json!({ "ok": "ok" }))
-
 }
 
 
