@@ -84,7 +84,7 @@ impl WebSocketServer {
     pub async fn run(&mut self) {
         let addr = "127.0.0.1:9002";
         let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-        info!("websocket service is listening on: {}", addr);
+        info!("WebSocket service is listening on: {}", addr);
 
         // 先加载配置
         if let Err(e) = self.load_config().await {
@@ -92,35 +92,36 @@ impl WebSocketServer {
             return;
         }
 
-        let tx_clone = self.tx.clone();
+        // let tx_clone = self.tx.clone();
+        //
+        // tokio::spawn({
+        //     async move {
+        //         loop {
+        //             tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
+        //             let _ = tx_clone.send(Message::text("broadcast msg"));
+        //         }
+        //     }
+        // });
 
-        tokio::spawn({
-            async move {
-                loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
-                    let _ = tx_clone.send(Message::text("broadcast msg"));
-                }
-            }
-        });
-
-        let server_clone = self.clone();
-        let server_arc = Arc::new(Mutex::new(server_clone));
+        // 用 RwLock 包裹 self 以便于多个任务并发读取
+        let server_arc = Arc::new(Mutex::new(self.clone()));
 
         while let Ok((stream, _)) = listener.accept().await {
-            let peer = stream
-                .peer_addr()
-                .expect("Connected streams should have a peer address");
+            let peer = stream.peer_addr().expect("Connected streams should have a peer address");
             println!("Peer address: {}", peer);
 
             let clients_clone = self.clients.clone();
             let tx_clone = self.tx.clone();
+
             // 使用 Arc<Mutex<Self>> 共享 `self`
             let server_arc_clone = Arc::clone(&server_arc);
+
             tokio::spawn({
                 let server_arc_clone = Arc::clone(&server_arc_clone);
                 async move {
                     let server = server_arc_clone.lock().await;
-                    server.accept_connection(peer, stream, clients_clone, tx_clone)
+                    server
+                        .accept_connection(peer, stream, clients_clone, tx_clone)
                         .await;
                 }
             });
@@ -137,7 +138,7 @@ impl WebSocketServer {
         if let Err(e) = self.handle_connection(peer, stream, clients, tx).await {
             match e {
                 Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
-                err => error!("Error processing connection: {}", err),
+                err => info!("Error processing connection: {}", err),
             }
         }
     }
@@ -167,28 +168,21 @@ impl WebSocketServer {
                 ws_guard.next().await
             } => {
 
-                    // 修改后的代码
             match msg {
                             Ok(msg) => {
-                                // let msg = msg?;
                                 self.handle_client_message(msg, peer, &tx, &ws_stream).await;
+                                break; // 发生错误时退出循环，触发清理逻辑
                             },
                             Err(e) => {
                                 info!("Error processing message: {}", e);
-                                return Ok(()); // 处理错误时可以提前返回
+                                 break; // 发生错误时退出循环，触发清理逻辑
                              }
                         };
 
-                //  if let Some(msg) = msg {
-                //     let msg = msg?;
-                //     self.handle_client_message(msg, peer, &tx, &ws_stream).await;
-                // } else {
-                //     break; // 连接关闭，跳出循环
-                // }
             }
             Ok(msg) = rx.recv() => {
                 // Listen for broadct messages and forward them to all clients
-                    if let Ok(msg) = rx.try_recv() {  // 使用 `try_recv` 避免阻塞
+                    if let Ok(msg) = rx.recv().await {  // 使用 `try_recv` 避免阻塞
                         self.broadcast_message(&clients, msg).await;
                     }
                 }
@@ -197,6 +191,7 @@ impl WebSocketServer {
 
         // 连接断开后，移除 WebSocket 客户端
         info!("Client {} disconnected", peer);
+
         let mut clients_lock = clients.lock().await;
         clients_lock.close();
         clients_lock.retain(|client| !Arc::ptr_eq(client, &ws_stream));
