@@ -47,12 +47,12 @@ async fn link_ws_server(url: &str) {
 
             // ws_stream.close(None).await;
             // 等待一段时间后发送关闭消息
-            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
             write
                 .send(Message::Close(None))
                 .await
                 .expect("Failed to send close message");
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             println!("WebSocket connection closed.");
         }
         // 处理连接失败的情况
