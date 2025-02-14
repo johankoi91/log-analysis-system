@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_yaml;
 use std::fs::read_dir;
 use std::{fs, sync::Arc};
+use std::ptr::read;
 use tokio::sync::{broadcast, Mutex};
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<async_tungstenite::WebSocketStream<TcpStream>>>>>>;
@@ -144,13 +145,13 @@ impl WebSocketServer {
 
         info!("New WebSocket connection: {}", peer);
 
-
         let mut clients_lock = clients.lock().await;
         clients_lock.push(ws_stream.clone()); // Use Arc::clone to share the reference
 
         // Listen for broadcast messages
         let mut rx = tx.subscribe();
 
+        info!(" begin handle_client_message");
         loop {
             tokio::select! {
             Some(msg) = async {
@@ -161,32 +162,32 @@ impl WebSocketServer {
             match msg {
                             Ok(msg) => {
                                 self.handle_client_message(msg, peer, &tx, &ws_stream).await;
-                                break; // 发生错误时退出循环，触发清理逻辑
+                                return Ok(());
                             },
                             Err(e) => {
                                 info!("Error processing message: {}", e);
-                                 break; // 发生错误时退出循环，触发清理逻辑
+                                return Err(e);
                              }
                         };
 
             }
-            Ok(msg) = rx.recv() => {
-                // Listen for broadct messages and forward them to all clients
-                    if let Ok(msg) = rx.recv().await {  // 使用 `try_recv` 避免阻塞
-                        self.broadcast_message(&clients, msg).await;
-                    }
-                }
+            // Ok(msg) = rx.recv() => {
+            //     // Listen for broadct messages and forward them to all clients
+            //         if let Ok(msg) = rx.recv().await {  // 使用 `try_recv` 避免阻塞
+            //             self.broadcast_message(&clients, msg).await;
+            //         }
+            //     }
             }
         }
-
+        info!("after tokio::select handle_client_message");
         // 连接断开后，移除 WebSocket 客户端
         info!("Client {} disconnected", peer);
 
-        let mut clients_lock = clients.lock().await;
-        clients_lock.close();
-        clients_lock.retain(|client| !Arc::ptr_eq(client, &ws_stream));
+        // let mut clients_lock = clients.lock().await;
+        // clients_lock.close();
+        // clients_lock.retain(|client| !Arc::ptr_eq(client, &ws_stream));
 
-        Ok(())
+        // Ok(())
     }
 
     async fn handle_client_message(
