@@ -230,8 +230,14 @@ impl WebSocketServer {
                         })
                         .collect();
 
-                    let response_json =
+                    let response_log_files =
                         serde_json::to_string(&log_files).expect("Failed to serialize to JSON");
+                    // 将 "get_log_source" 的响应与日志文件数据一起构造响应
+                    let  response_json = format!(
+                        r#"{{"get_log_source": true, "log_files": {}}}"#,
+                        response_log_files
+                    );
+
                     let response_msg = Message::Text(response_json);
                     // 发送消息给当前客户端
                     let mut client_ws_guard = client_ws.lock().await;

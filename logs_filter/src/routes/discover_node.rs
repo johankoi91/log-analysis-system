@@ -2,10 +2,29 @@ use actix_web::{web, Responder};
 use async_tungstenite::tokio::connect_async;
 use async_tungstenite::tungstenite::protocol::Message;
 use futures_util::{SinkExt, StreamExt};
-use serde_json::json;
+use log::info;
+use serde_json::{json, Value};
 use tokio::time::{timeout, Duration};
+use tokio::sync::mpsc;
 
-async fn link_ws_server(url: &str) {
+/*
+ {
+                                "get_log_source": true,
+                                "log_files": [
+                                {
+                                    "hostname": "host1",
+                                    "services": [
+                                    {
+                                        "service_type": "service1",
+                                        "log_files": ["log1", "log2"]
+                                    }
+                                    ]
+                                }
+                                ]
+                            }
+*/
+
+async fn link_ws_server(url: &str, tx: mpsc::Sender<Value>) {
     // 设置连接超时时间为 5 秒
     let connect_timeout = Duration::from_secs(5);
 
@@ -19,7 +38,7 @@ async fn link_ws_server(url: &str) {
 
             // 发送一条文本消息
             let send_text = "get_log_source".to_string();
-            println!("Sending: {}", send_text);
+            info!("Sending: {} to log provider ws server", send_text);
             write
                 .send(Message::Text(send_text))
                 .await
@@ -30,7 +49,16 @@ async fn link_ws_server(url: &str) {
                 while let Some(msg) = read.next().await {
                     match msg {
                         Ok(Message::Text(text)) => {
-                            println!("Received text: {}", text);
+                            let result: Result<Value, _> = serde_json::from_str(&text);
+                            if let Ok(json_data) = result {
+                                if json_data["get_log_source"].as_bool() == Some(true) {
+                                    let _ = tx.send(json_data).await;
+                                } else {
+                                    println!("Received message without valid 'get_log_source' field.");
+                                }
+                            } else {
+                                println!("Failed to parse received message as JSON.");
+                            }
                         }
                         Ok(Message::Binary(bin)) => {
                             println!("Received binary: {:?}", bin);
@@ -44,16 +72,6 @@ async fn link_ws_server(url: &str) {
                     }
                 }
             });
-
-            // ws_stream.close(None).await;
-            // 等待一段时间后发送关闭消息
-            tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
-            write
-                .send(Message::Close(None))
-                .await
-                .expect("Failed to send close message");
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            println!("WebSocket connection closed.");
         }
         // 处理连接失败的情况
         Ok(Err(err)) => {
@@ -67,8 +85,23 @@ async fn link_ws_server(url: &str) {
 }
 
 pub async fn discover_node() -> impl Responder {
-    tokio::spawn(async { link_ws_server("ws://localhost:9002").await });
-    web::Json(json!({ "ok": "ok" }))
+    // 创建一个通道用于接收 WebSocket 数据
+    let (tx, mut rx) = mpsc::channel(1);
+
+    // 启动 WebSocket 连接并传递发送器
+    link_ws_server("ws://localhost:9002", tx).await;
+
+    // 等待 WebSocket 数据，并返回作为 HTTP 响应
+    match rx.recv().await {
+        Some(valid_data) => {
+            // 如果收到有效的数据，作为 HTTP 响应返回
+            web::Json(valid_data)
+        }
+        None => {
+            // 如果没有收到数据，返回一个默认响应
+            web::Json(json!({ "error": "Failed to get log source" }))
+        }
+    }
 }
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
