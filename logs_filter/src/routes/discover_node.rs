@@ -19,8 +19,8 @@ impl WebSocketClient {
     // WebSocket 客户端连接函数
     async fn connect(url: &str) -> Result<WebSocketClient, String> {
         let connect_timeout = Duration::from_secs(3);
-
-        match timeout(connect_timeout, connect_async(url)).await {
+        let ws_url = format!("ws://{}", url);
+        match timeout(connect_timeout, connect_async(ws_url)).await {
             Ok(Ok((ws_stream, response))) => {
                 println!("Connected to server with status: {}", response.status());
 
@@ -43,7 +43,7 @@ impl WebSocketClient {
                         match msg {
                             Ok(Message::Text(text)) => {
                                 if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
-                                    if json_data["get_log_source"].as_bool() == Some(true) {
+                                    if json_data["cmd"].as_str() == Some("get_log_source") {
                                         // 尝试发送消息，如果锁已经被占用，尝试重试
                                         let _ = sender_clone.lock().await.send(json_data);
                                     }
@@ -64,7 +64,6 @@ impl WebSocketClient {
 
                 // 每次请求都发送消息
                 write.send(Message::Text(send_text)).await.expect("Failed to send message");
-
                 Ok(WebSocketClient { sender, receiver })
             }
             Ok(Err(err)) => Err(format!("Failed to connect: {}", err)),
@@ -84,11 +83,7 @@ impl WebSocketClient {
 
 pub async fn discover_node() -> impl Responder {
     let urls = vec![
-        "ws://localhost:9002",
-        "ws://localhost:9002",
-        "ws://localhost:9004",
-        "ws://localhost:9005",
-        // 你可以继续添加其他 URL
+        "localhost:9002",
     ];
 
     // 创建一个 `Mutex` 来确保安全地共享合并结果

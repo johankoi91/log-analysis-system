@@ -1,16 +1,16 @@
 use async_std::net::{SocketAddr, TcpListener, TcpStream};
 use async_tungstenite::{
     accept_async,
-    WebSocketStream,
     tungstenite::{Error, Message, Result},
+    WebSocketStream,
 };
 use futures::prelude::*;
 use log::*;
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use std::fs::read_dir;
-use std::{fs, sync::Arc};
 use std::ptr::read;
+use std::{fs, sync::Arc};
 use tokio::sync::{broadcast, Mutex};
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
@@ -34,15 +34,16 @@ struct ServiceType {
 }
 
 #[derive(Serialize, Clone)]
-struct LogFiles {
-    hostname: String,
-    services: Vec<ServiceFiles>,
-}
-
-#[derive(Serialize, Clone)]
 struct ServiceFiles {
     service_type: String,
+    dir: String,
     log_files: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct Response {
+    cmd: String,
+    services: Vec<ServiceFiles>, // 或者替换成你期望的具体类型
 }
 
 #[derive(Clone)]
@@ -97,20 +98,23 @@ impl WebSocketServer {
         let server_arc = Arc::new(Mutex::new(self.clone()));
 
         while let Ok((stream, _)) = listener.accept().await {
-            let peer = stream.peer_addr().expect("Connected streams should have a peer address");
+            let peer = stream
+                .peer_addr()
+                .expect("Connected streams should have a peer address");
             info!("Connected a peer address: {}", peer);
 
             let clients_clone = self.clients.clone();
             let tx_clone = self.tx.clone();
 
-            // 使用 Arc<Mutex<Self>> 共享 `self`
             let server_arc_clone = Arc::clone(&server_arc);
 
             tokio::spawn({
                 async move {
                     let server = server_arc_clone.lock().await;
                     info!("before call accept_connection");
-                    server.accept_connection(peer, stream, clients_clone, tx_clone).await;
+                    server
+                        .accept_connection(peer, stream, clients_clone, tx_clone)
+                        .await;
                     info!("after call accept_connection");
                 }
             });
@@ -124,14 +128,14 @@ impl WebSocketServer {
         clients: SharedClients,
         tx: Broadcaster,
     ) {
-        info!("Starting accept_connection for peer: {}", peer);  // 打印开始信息
+        info!("Starting accept_connection for peer: {}", peer); // 打印开始信息
         if let Err(e) = self.handle_connection(peer, stream, clients, tx).await {
             match e {
                 Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
                 err => info!("Error processing connection: {}", err),
             }
         }
-        info!("Exiting accept_connection for peer: {}", peer);  // 打印结束信息
+        info!("Exiting accept_connection for peer: {}", peer); // 打印结束信息
     }
 
     pub async fn handle_connection(
@@ -149,46 +153,25 @@ impl WebSocketServer {
         let mut clients_lock = clients.lock().await;
         clients_lock.push(ws_stream.clone()); // Use Arc::clone to share the reference
 
-        // Listen for broadcast messages
-        let mut rx = tx.subscribe();
-
-        info!(" begin handle_client_message");
         loop {
             tokio::select! {
             Some(msg) = async {
                 let mut ws_guard = ws_stream.lock().await; // Lock the WebSocketStream for mutable access
                 ws_guard.next().await
-            } => {
-
-            match msg {
-                            Ok(msg) => {
-                                self.handle_client_message(msg, peer, &tx, &ws_stream).await;
-                                return Ok(());
-                            },
-                            Err(e) => {
-                                info!("Error processing message: {}", e);
-                                return Err(e);
-                             }
-                        };
-
-            }
-            // Ok(msg) = rx.recv() => {
-            //     // Listen for broadct messages and forward them to all clients
-            //         if let Ok(msg) = rx.recv().await {  // 使用 `try_recv` 避免阻塞
-            //             self.broadcast_message(&clients, msg).await;
-            //         }
-            //     }
+                } => {
+                    match msg {
+                        Ok(msg) => {
+                            self.handle_client_message(msg, peer, &tx, &ws_stream).await;
+                            return Ok(());
+                        },
+                        Err(e) => {
+                            info!("Error processing message: {}", e);
+                            return Err(e);
+                        }};
+                }
             }
         }
         info!("after tokio::select handle_client_message");
-        // 连接断开后，移除 WebSocket 客户端
-        info!("Client {} disconnected", peer);
-
-        // let mut clients_lock = clients.lock().await;
-        // clients_lock.close();
-        // clients_lock.retain(|client| !Arc::ptr_eq(client, &ws_stream));
-
-        // Ok(())
     }
 
     async fn handle_client_message(
@@ -196,52 +179,50 @@ impl WebSocketServer {
         msg: Message,
         peer: SocketAddr,
         tx: &Broadcaster,
-        client_ws: &Arc<Mutex<async_tungstenite::WebSocketStream<TcpStream>>>,
+        client_ws: &Arc<Mutex<WebSocketStream<TcpStream>>>,
     ) {
         if msg.is_text() {
             let text = msg.to_text().unwrap();
             info!("Received text message from {}: {}", peer, text);
-
-            // 判断是否是 "get_log_source"
             if text == "get_log_source" {
                 info!("Processing get_log_source from {} for get log files", peer);
                 if let Some(config) = &self.config {
-                    let log_files: Vec<LogFiles> = config
-                        .log_inputs
-                        .iter()
-                        .map(|input| {
-                            let services = input
-                                .purpose
-                                .iter()
-                                .map(|service| ServiceFiles {
-                                    service_type: service.service_type.clone(),
-                                    log_files: service
-                                        .path
-                                        .iter()
-                                        .flat_map(|path| {
-                                            WebSocketServer::get_files_in_directory(path)
-                                        })
-                                        .collect(),
+                    let log_files: Vec<ServiceFiles> = config
+                        .log_inputs.iter().flat_map(|inputs_kv| {
+                            inputs_kv.purpose.iter().flat_map(|kv| {
+                              let serxx: Vec<ServiceFiles> =
+                                  kv.path.iter().map(|path| ServiceFiles {
+                                                    service_type: kv.service_type.clone(),
+                                                    dir: path.clone(),
+                                                    log_files:  WebSocketServer::get_files_in_directory(path),
+                                }).collect();
+                             serxx
+                            })
+                        }).collect();
+
+                    let log_files: Vec<ServiceFiles> = config
+                        .log_inputs.iter()
+                        .flat_map(|inputs_kv| {
+                            inputs_kv.purpose.iter().flat_map(|kv| {
+                               kv.path.iter().map(|path| ServiceFiles { // ServiceFiles array
+                                    service_type: kv.service_type.clone(),
+                                    dir: path.clone(),
+                                    log_files: WebSocketServer::get_files_in_directory(path),
                                 })
-                                .collect();
-                            LogFiles {
-                                hostname: input.hostname.clone(),
-                                services,
-                            }
+                            })
                         })
                         .collect();
 
-                    let response_log_files =
-                        serde_json::to_string(&log_files).expect("Failed to serialize to JSON");
-                    let  response_json = format!(
-                        r#"{{"get_log_source": true, "log_files": {}}}"#,
-                        response_log_files
-                    );
+                    let response = Response {
+                        cmd: text.to_string(),
+                        services: log_files,
+                    };
+
+                    let response_json = serde_json::to_string(&response).expect("Failed to serialize to JSON");
                     info!("response_log_files: {} ", response_json);
                     let response_msg = Message::Text(response_json);
                     let mut client_ws_guard = client_ws.lock().await;
-                    client_ws_guard.send(response_msg).await;
-
+                    let _ = client_ws_guard.send(response_msg).await;
                     return;
                 }
             }
@@ -251,15 +232,6 @@ impl WebSocketServer {
             info!("Received is_close");
             let mut client_ws_guard = client_ws.lock().await;
             client_ws_guard.close(None).await;
-        }
-    }
-
-    // 广播消息给所有客户端
-    async fn broadcast_message(&self, clients: &SharedClients, msg: Message) {
-        let clients_lock = clients.lock().await;
-        for client in clients_lock.iter() {
-            let mut client = client.lock().await;
-            let _ = client.send(msg.clone()).await;
         }
     }
 }

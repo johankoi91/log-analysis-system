@@ -6,4 +6,7 @@ log_inputs:
           - /Users/hanxiaoqing/log/agora/
       - service_type: RTM
         path:
-          - /Users/hanxiaoqing/log/agora/
+          - /Users/hanxiaoqing/log/RTM/
+      - service_type: APAAS
+        path:
+          - /Users/hanxiaoqing/log/APAAS/
