@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Select, Button, Row, Col, Typography, Popover, Input, Tag, message, List, Tooltip } from 'antd';
 import DateRangePicker from './DateRangePicker';  // Importing the DateRangePicker component
@@ -15,8 +15,8 @@ const LogSearch = () => {
         hostname: '',
         service: '',
         basename: '',
-        dir: '',
-        datetime: null
+        datetime: null,
+        dir: ''
     });
     const [availableFilters, setAvailableFilters] = useState({
         hostname: [],
@@ -33,6 +33,9 @@ const LogSearch = () => {
     const [endTime, setEndTime] = useState("");
     const [contextData, setContextData] = useState([]);
     const [filterData, setFilterData] = useState({});  // Storing filter data from /discover_node
+
+    // Ref to hold WebSocket connection
+    const socketRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);
@@ -51,10 +54,9 @@ const LogSearch = () => {
     useEffect(() => {
         axios.get("http://localhost:8080/discover_node")
             .then(response => {
-                setFilterData(response.data); // Save the entire response
+                setFilterData(response.data);
 
-                // Extract hostname, service, and log_files from filterData to set in availableFilters
-                const hostnameList = Object.keys(response.data); // localhost:9002, localhost:9003
+                const hostnameList = Object.keys(response.data);
                 setAvailableFilters(prevFilters => ({
                     ...prevFilters,
                     hostname: hostnameList,
@@ -62,56 +64,53 @@ const LogSearch = () => {
                     basename: []
                 }));
 
-                // If there is already a selected hostname, we can fill in service options
                 if (filters.hostname) {
                     const selectedHostnameData = response.data[filters.hostname];
                     const serviceList = selectedHostnameData.services.map(service => service.service_type);
                     setAvailableFilters(prevFilters => ({
                         ...prevFilters,
                         service: serviceList,
-                        basename: [] // Reset basename when service or hostname changes
+                        basename: []
                     }));
                 }
             })
             .catch(error => message.error("Failed to fetch filter data"));
     }, []);
 
-    /**
-    const fetchFieldOptions = (field) => {
-        setFilterLoading(true);
-        axios.get(`http://localhost:8080/indices?index_pattern=${es_index}&field=${field}`)
-            .then(response => {
-                const fieldName = field.split('.')[0];
-                setAvailableFilters(prevFilters => ({
-                    ...prevFilters,
-                    [fieldName]: response.data.unique_services || []
-                }));
-            })
-            .finally(() => setFilterLoading(false));
-    };
+    // const fetchFieldOptions = (field) => {
+    //     setFilterLoading(true);
+    //     axios.get(`http://localhost:8080/indices?index_pattern=${es_index}&field=${field}`)
+    //         .then(response => {
+    //             const fieldName = field.split('.')[0];
+    //             setAvailableFilters(prevFilters => ({
+    //                 ...prevFilters,
+    //                 [fieldName]: response.data.unique_services || []
+    //             }));
+    //         })
+    //         .finally(() => setFilterLoading(false));
+    // };
+    //
+    // useEffect(() => {
+    //     if (es_index) {
+    //         fetchFieldOptions('hostname.keyword');
+    //         fetchFieldOptions('service.keyword');
+    //         fetchFieldOptions('basename.keyword');
+    //     }
+    // }, [es_index]);
 
-    useEffect(() => {
-        if (es_index) {
-            fetchFieldOptions('hostname.keyword');
-            fetchFieldOptions('service.keyword');
-            fetchFieldOptions('basename.keyword');
-        }
-    }, [es_index]);
-     **/
     const handleFilterChange = (value, field) => {
         setFilters(prevFilters => ({
             ...prevFilters,
             [field]: value
         }));
 
-        // Update service and basename when hostname or service changes
         if (field === 'hostname') {
-            const selectedHostnameData = filterData[value]; // Get services for the selected hostname
+            const selectedHostnameData = filterData[value];
             const selectedServices = selectedHostnameData.services.map(service => service.service_type);
             setAvailableFilters(prevFilters => ({
                 ...prevFilters,
                 service: selectedServices,
-                basename: []  // Reset basename when hostname or service changes
+                basename: []
             }));
         }
 
@@ -144,22 +143,39 @@ const LogSearch = () => {
     };
 
     const handleSearch = () => {
-        if (!searchQuery || !es_index || !filters.hostname || !filters.service || !filters.basename || !startTime || !endTime) {
+        if (!filters.hostname || !filters.basename || !filters.dir) {
+            console.log("handleSearch---",filters);
             message.error("All fields are required.");
             return;
         }
 
-        axios.post("http://localhost:8080/search", {
-            keyword: searchQuery,
-            es_index: es_index,
-            hostname: filters.hostname,
-            service: filters.service,
-            basename: filters.basename,
-            start_time: startTime,
-            end_time: endTime,
-        }).then(response => {
-            setResults(response.data.results);
-        });
+        // Ensure WebSocket connection is established
+        if (!socketRef.current) {
+            socketRef.current = new WebSocket(`ws://${filters.hostname}`);  // WebSocket address based on filters.hostname
+        }
+
+        socketRef.current.onopen = () => {
+            const messagePayload = {
+                upload_file: filters.dir + filters.basename,
+                cmd: 'firebase_upload',  // Sending cmd: firebase_upload
+            };
+            socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
+            console.log("Message sent:", messagePayload);
+        };
+
+        socketRef.current.onmessage = (event) => {
+            console.log("Message received:", event.data);  // Handle the response from the server
+            // You can handle the server response here as needed
+        };
+
+        socketRef.current.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            message.error("Error occurred while connecting to WebSocket.");
+        };
+
+        socketRef.current.onclose = () => {
+            console.log("WebSocket connection closed.");
+        };
     };
 
     const handleContextClick = (timestamp) => {

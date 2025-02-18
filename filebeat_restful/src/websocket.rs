@@ -11,6 +11,7 @@ use serde_yaml;
 use std::fs::read_dir;
 use std::ptr::read;
 use std::{fs, sync::Arc};
+use serde_json::Value;
 use tokio::sync::{broadcast, Mutex};
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
@@ -226,6 +227,14 @@ impl WebSocketServer {
                     return;
                 }
             }
+
+            if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
+                if json_data["cmd"].as_str() == Some("firebase_upload") {
+                    info!("firebase_upload: {} ", json_data);
+                }
+            }
+
+
         } else if msg.is_binary() {
             info!("Received binary message from {}", peer);
         } else if msg.is_close() {
