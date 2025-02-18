@@ -1,3 +1,5 @@
+use crate::modify_filebeat_yaml::{modify_yaml,modify_yaml_dynamic};
+use crate::system_cmd;
 use async_std::net::{SocketAddr, TcpListener, TcpStream};
 use async_tungstenite::{
     accept_async,
@@ -7,13 +9,12 @@ use async_tungstenite::{
 use futures::prelude::*;
 use log::*;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_yaml;
 use std::fs::read_dir;
 use std::ptr::read;
 use std::{fs, sync::Arc};
-use serde_json::Value;
 use tokio::sync::{broadcast, Mutex};
-use crate::modify_filebeat_yaml::modify_yaml;
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
 type Broadcaster = broadcast::Sender<Message>;
@@ -188,21 +189,25 @@ impl WebSocketServer {
             if text == "get_log_source" {
                 info!("Received cmd：{} from {} for get log files", text, peer);
                 if let Some(config) = &self.config {
-                    let log_files: Vec<ServiceFiles> = config.log_inputs.iter().
-                        flat_map(|inputs_kv| {
+                    let log_files: Vec<ServiceFiles> = config
+                        .log_inputs
+                        .iter()
+                        .flat_map(|inputs_kv| {
                             inputs_kv.path.iter().map(|path| ServiceFiles {
                                 service_type: inputs_kv.service_type.clone(),
                                 dir: path.clone(),
                                 log_files: WebSocketServer::get_files_in_directory(path),
                             })
-                        }).collect();
+                        })
+                        .collect();
 
                     let response = Response {
                         cmd: text.to_string(),
                         services: log_files,
                     };
 
-                    let response_json = serde_json::to_string(&response).expect("Failed to serialize to JSON");
+                    let response_json =
+                        serde_json::to_string(&response).expect("Failed to serialize to JSON");
                     info!("response_log_files: {} ", response_json);
                     let response_msg = Message::Text(response_json);
                     let mut client_ws_guard = client_ws.lock().await;
@@ -213,19 +218,30 @@ impl WebSocketServer {
 
             if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
                 if json_data["cmd"].as_str() == Some("firebase_upload") {
-                    info!("Received cmd：{} from {}", json_data["cmd"].as_str(), peer);
+                    info!("Received cmd: firebase_upload from {}", peer);
                     let file_path = "/Users/hanxiaoqing/filebeat-docker/inputs.d/log.yml"; // 指定 YAML 文件路径
-                        let new_paths = vec![
-                            json_data["upload_file"].to_string(),
-                        ];
-                        let new_service = json_data["hostname"].to_string();
-                        let new_hostname = json_data["service"].to_string();
-                        modify_yaml(file_path, new_paths, new_service, new_hostname);
+                    let new_paths = vec![json_data["upload_file"].as_str().unwrap_or_default().to_string()];
+                    let new_service = json_data["hostname"].as_str().unwrap_or_default().to_string();
+                    let new_hostname = json_data["service"].as_str().unwrap_or_default().to_string();
+                    modify_yaml_dynamic(file_path, new_paths, new_service, new_hostname);
+
+                    let response_msg = Message::Text("firebase_upload ing".to_string());
+                    let mut client_ws_guard = client_ws.lock().await;
+                    client_ws_guard.send(response_msg).await;
+
+                    match system_cmd::get_and_restart_container("filebeat").await {
+                        Ok(container_id) => {
+                            println!("Container ID: {:?}", container_id);
+                            return;
+                        }
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            return;
+                        }
+                    }
                 }
                 return;
             }
-
-
         } else if msg.is_binary() {
             info!("Received binary message from {}", peer);
         } else if msg.is_close() {

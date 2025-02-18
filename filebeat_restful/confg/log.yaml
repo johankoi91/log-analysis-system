@@ -1,10 +1,10 @@
 log_inputs:
   - service_type: RTC
     path:
-      - /Users/hanxiaoqing/log/agora/
+      - /var/log/agora/
   - service_type: RTM
     path:
-      - /Users/hanxiaoqing/log/RTM/
+      - /var/log/RTM/
   - service_type: APAAS
     path:
-      - /Users/hanxiaoqing/log/APAAS/
+      - /var/log/APAAS/

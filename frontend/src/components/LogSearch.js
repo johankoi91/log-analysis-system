@@ -12,11 +12,11 @@ const LogSearch = () => {
     const [indices, setIndices] = useState([]);
     const [es_index, setEsIndex] = useState("");
     const [filters, setFilters] = useState({
-        hostname: '',
-        service: '',
-        basename: '',
+        hostname: "",
+        service:  "",
+        basename: "",
         datetime: null,
-        dir: ''
+        dir: ""
     });
     const [availableFilters, setAvailableFilters] = useState({
         hostname: [],
@@ -164,8 +164,9 @@ const LogSearch = () => {
                 upload_file: filters.dir + filters.basename,
                 service: filters.service,
                 hostname: filters.hostname,  // Sending cmd: firebase_upload
-                cmd: 'firebase_upload',  // Sending cmd: firebase_upload
+                cmd: "firebase_upload",  // Sending cmd: firebase_upload
             };
+
             socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
             console.log("Message sent:", messagePayload);
         };

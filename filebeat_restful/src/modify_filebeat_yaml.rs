@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_yaml::{Value, from_reader, to_writer};
+use serde_yaml::{Value, from_reader, to_writer, to_string, Serializer, Sequence};
 use std::fs::File;
 
 // 定义结构体来对应 YAML 文件中的数据结构
@@ -39,8 +39,15 @@ pub fn modify_yaml(file_path: &str, new_paths: Vec<String>, new_service: String,
 
     // 打开文件进行写回修改后的内容
     let file = File::create(file_path)?;
-    serde_yaml::to_writer(file, &data)?;
 
+    // 序列化数据为字符串，并自定义缩进
+    let yaml_string = to_string(&data)?;
+
+    // 自定义缩进（例如：每个缩进为 4 个空格）
+    let yaml_string_with_custom_indent = yaml_string.replace("  -", "\n    -"); // 可以根据需要进一步处理
+
+    serde_yaml::to_writer(file, &yaml_string_with_custom_indent.as_bytes())?;
+    
     Ok(())
 }
 
@@ -70,25 +77,4 @@ pub fn modify_yaml_dynamic(file_path: &str, new_paths: Vec<String>, new_service:
 
     Ok(())
 }
-//
-// fn main() -> Result<(), Box<dyn std::error::Error>> {
-//     let file_path = "config.yml"; // 指定 YAML 文件路径
-//
-//     // 修改的字段值
-//     let new_paths = vec![
-//         "/new/path/to/log1.log".to_string(),
-//         "/new/path/to/log2.log".to_string(),
-//     ];
-//     let new_service = "NewRTC".to_string();
-//     let new_hostname = "NewMachine".to_string();
-//
-//     // 使用结构体实现修改
-//     modify_yaml(file_path, new_paths, new_service, new_hostname)?;
-//
-//     println!("YAML 文件已更新。");
-//
-//     // 如果想使用动态方式修改，替换上述行：
-//     // modify_yaml_dynamic(file_path, new_paths, new_service, new_hostname)?;
-//
-//     Ok(())
-// }
+
