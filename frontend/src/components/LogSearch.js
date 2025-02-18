@@ -143,20 +143,27 @@ const LogSearch = () => {
     };
 
     const handleSearch = () => {
-        if (!filters.hostname || !filters.basename || !filters.dir) {
+        if (!filters.hostname || !filters.basename || !filters.dir || !filters.service) {
             console.log("handleSearch---",filters);
             message.error("All fields are required.");
             return;
         }
 
-        // Ensure WebSocket connection is established
-        if (!socketRef.current) {
-            socketRef.current = new WebSocket(`ws://${filters.hostname}`);  // WebSocket address based on filters.hostname
+
+        if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+            socketRef.current.close();
         }
 
+        // Create a new WebSocket connection each time
+        socketRef.current = new WebSocket(`ws://${filters.hostname}`);
+
+
         socketRef.current.onopen = () => {
+            console.log("socketRef onopen:");  // Handle the response from the server
             const messagePayload = {
                 upload_file: filters.dir + filters.basename,
+                service: filters.service,
+                hostname: filters.hostname,  // Sending cmd: firebase_upload
                 cmd: 'firebase_upload',  // Sending cmd: firebase_upload
             };
             socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server

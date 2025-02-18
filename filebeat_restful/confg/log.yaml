@@ -1,12 +1,10 @@
 log_inputs:
-  - hostname: "machineA"
-    purpose:
-      - service_type: RTC
-        path:
-          - /Users/hanxiaoqing/log/agora/
-      - service_type: RTM
-        path:
-          - /Users/hanxiaoqing/log/RTM/
-      - service_type: APAAS
-        path:
-          - /Users/hanxiaoqing/log/APAAS/
+  - service_type: RTC
+    path:
+      - /Users/hanxiaoqing/log/agora/
+  - service_type: RTM
+    path:
+      - /Users/hanxiaoqing/log/RTM/
+  - service_type: APAAS
+    path:
+      - /Users/hanxiaoqing/log/APAAS/

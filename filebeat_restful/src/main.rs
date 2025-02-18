@@ -1,8 +1,9 @@
 pub mod websocket;
+mod modify_filebeat_yaml;
+
 use websocket::{WebSocketServer};
 use env_logger;
 use env_logger::Env;
-use log::error;
 
 #[tokio::main]
 async fn main() {

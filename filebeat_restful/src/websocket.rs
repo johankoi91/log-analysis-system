@@ -13,20 +13,21 @@ use std::ptr::read;
 use std::{fs, sync::Arc};
 use serde_json::Value;
 use tokio::sync::{broadcast, Mutex};
+use crate::modify_filebeat_yaml::modify_yaml;
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
 type Broadcaster = broadcast::Sender<Message>;
 
 #[derive(Debug, Deserialize, Clone)]
 struct Config {
-    log_inputs: Vec<LogInput>,
+    log_inputs: Vec<ServiceType>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-struct LogInput {
-    hostname: String,
-    purpose: Vec<ServiceType>,
-}
+// #[derive(Debug, Deserialize, Clone)]
+// struct LogInput {
+//     hostname: String,
+//     purpose: Vec<ServiceType>,
+// }
 
 #[derive(Debug, Deserialize, Clone)]
 struct ServiceType {
@@ -184,35 +185,17 @@ impl WebSocketServer {
     ) {
         if msg.is_text() {
             let text = msg.to_text().unwrap();
-            info!("Received text message from {}: {}", peer, text);
             if text == "get_log_source" {
-                info!("Processing get_log_source from {} for get log files", peer);
+                info!("Received cmd：{} from {} for get log files", text, peer);
                 if let Some(config) = &self.config {
-                    let log_files: Vec<ServiceFiles> = config
-                        .log_inputs.iter().flat_map(|inputs_kv| {
-                            inputs_kv.purpose.iter().flat_map(|kv| {
-                              let serxx: Vec<ServiceFiles> =
-                                  kv.path.iter().map(|path| ServiceFiles {
-                                                    service_type: kv.service_type.clone(),
-                                                    dir: path.clone(),
-                                                    log_files:  WebSocketServer::get_files_in_directory(path),
-                                }).collect();
-                             serxx
+                    let log_files: Vec<ServiceFiles> = config.log_inputs.iter().
+                        flat_map(|inputs_kv| {
+                            inputs_kv.path.iter().map(|path| ServiceFiles {
+                                service_type: inputs_kv.service_type.clone(),
+                                dir: path.clone(),
+                                log_files: WebSocketServer::get_files_in_directory(path),
                             })
                         }).collect();
-
-                    let log_files: Vec<ServiceFiles> = config
-                        .log_inputs.iter()
-                        .flat_map(|inputs_kv| {
-                            inputs_kv.purpose.iter().flat_map(|kv| {
-                               kv.path.iter().map(|path| ServiceFiles { // ServiceFiles array
-                                    service_type: kv.service_type.clone(),
-                                    dir: path.clone(),
-                                    log_files: WebSocketServer::get_files_in_directory(path),
-                                })
-                            })
-                        })
-                        .collect();
 
                     let response = Response {
                         cmd: text.to_string(),
@@ -230,8 +213,16 @@ impl WebSocketServer {
 
             if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
                 if json_data["cmd"].as_str() == Some("firebase_upload") {
-                    info!("firebase_upload: {} ", json_data);
+                    info!("Received cmd：{} from {}", json_data["cmd"].as_str(), peer);
+                    let file_path = "/Users/hanxiaoqing/filebeat-docker/inputs.d/log.yml"; // 指定 YAML 文件路径
+                        let new_paths = vec![
+                            json_data["upload_file"].to_string(),
+                        ];
+                        let new_service = json_data["hostname"].to_string();
+                        let new_hostname = json_data["service"].to_string();
+                        modify_yaml(file_path, new_paths, new_service, new_hostname);
                 }
+                return;
             }
 
 
