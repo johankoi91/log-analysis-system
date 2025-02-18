@@ -6,7 +6,7 @@ use actix_web::{web, App, HttpServer};
 use actix_cors::Cors;
 use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
-use routes::{search, context, unique_services, get_indices, discover_node};
+use routes::{search, context, unique_services, get_indices, discover_node, logstash_noty};
 use env_logger;
 
 #[actix_web::main]
@@ -42,6 +42,7 @@ async fn main() -> std::io::Result<()> {
             .configure(unique_services::init_routes)
             .configure(get_indices::init_routes)
             .configure(discover_node::init_routes)
+            .configure(logstash_noty::init_routes)
     })
         .bind("127.0.0.1:8080")?
         .run()

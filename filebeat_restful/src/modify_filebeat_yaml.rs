@@ -47,7 +47,7 @@ pub fn modify_yaml(file_path: &str, new_paths: Vec<String>, new_service: String,
     let yaml_string_with_custom_indent = yaml_string.replace("  -", "\n    -"); // 可以根据需要进一步处理
 
     serde_yaml::to_writer(file, &yaml_string_with_custom_indent.as_bytes())?;
-    
+
     Ok(())
 }
 
