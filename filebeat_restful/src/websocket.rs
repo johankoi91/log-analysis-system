@@ -1,6 +1,7 @@
 use async_std::net::{SocketAddr, TcpListener, TcpStream};
 use async_tungstenite::{
     accept_async,
+    WebSocketStream,
     tungstenite::{Error, Message, Result},
 };
 use futures::prelude::*;
@@ -12,7 +13,7 @@ use std::{fs, sync::Arc};
 use std::ptr::read;
 use tokio::sync::{broadcast, Mutex};
 
-type SharedClients = Arc<Mutex<Vec<Arc<Mutex<async_tungstenite::WebSocketStream<TcpStream>>>>>>;
+type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
 type Broadcaster = broadcast::Sender<Message>;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -232,14 +233,12 @@ impl WebSocketServer {
 
                     let response_log_files =
                         serde_json::to_string(&log_files).expect("Failed to serialize to JSON");
-                    // 将 "get_log_source" 的响应与日志文件数据一起构造响应
                     let  response_json = format!(
                         r#"{{"get_log_source": true, "log_files": {}}}"#,
                         response_log_files
                     );
-
+                    info!("response_log_files: {} ", response_json);
                     let response_msg = Message::Text(response_json);
-                    // 发送消息给当前客户端
                     let mut client_ws_guard = client_ws.lock().await;
                     client_ws_guard.send(response_msg).await;
 
