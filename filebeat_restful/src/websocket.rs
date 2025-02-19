@@ -15,6 +15,7 @@ use std::fs::read_dir;
 use std::ptr::read;
 use std::{fs, sync::Arc};
 use tokio::sync::{broadcast, Mutex};
+use std::env;
 
 type SharedClients = Arc<Mutex<Vec<Arc<Mutex<WebSocketStream<TcpStream>>>>>>;
 type Broadcaster = broadcast::Sender<Message>;
@@ -23,12 +24,6 @@ type Broadcaster = broadcast::Sender<Message>;
 struct Config {
     log_inputs: Vec<ServiceType>,
 }
-
-// #[derive(Debug, Deserialize, Clone)]
-// struct LogInput {
-//     hostname: String,
-//     purpose: Vec<ServiceType>,
-// }
 
 #[derive(Debug, Deserialize, Clone)]
 struct ServiceType {
@@ -68,8 +63,9 @@ impl WebSocketServer {
 
     pub async fn load_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if self.config.is_none() {
-            let config_path = "/Users/hanxiaoqing/log-searching/filebeat_restful/confg/log.yaml";
-            let config_data = fs::read_to_string(config_path)?;
+            let file_path = env::var("LOG_FILE_PATH").unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/log.yaml".to_string());
+            let config_data = fs::read_to_string(file_path)?;
+            info!("load_config: {}", config_data);
             let config: Config = serde_yaml::from_str(&config_data)
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?; // Explicitly convert error
             self.config = Some(config);
@@ -88,13 +84,13 @@ impl WebSocketServer {
     }
 
     pub async fn run(&mut self) {
-        let addr = "127.0.0.1:9002";
+        let addr = "0.0.0.0:9002";
         let listener = TcpListener::bind(&addr).await.expect("Can't listen");
         info!("WebSocket service is listening on: {}", addr);
 
         // 先加载配置
         if let Err(e) = self.load_config().await {
-            error!("Error loading config: {}", e);
+            info!("Error loading config: {}", e);
             return;
         }
 
@@ -218,25 +214,40 @@ impl WebSocketServer {
 
             if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
                 if json_data["cmd"].as_str() == Some("firebase_upload") {
-                    info!("Received cmd: firebase_upload from {}", peer);
-                    let file_path = "/Users/hanxiaoqing/filebeat-docker/inputs.d/log.yml"; // 指定 YAML 文件路径
+                    let file_path = env::var("FILEBEAT_CONFIG_LOG_PATH").unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/filebeat/inputs.d/log.yml".to_string());
                     let new_paths = vec![json_data["upload_file"].as_str().unwrap_or_default().to_string()];
                     let new_service = json_data["hostname"].as_str().unwrap_or_default().to_string();
                     let new_hostname = json_data["service"].as_str().unwrap_or_default().to_string();
-                    modify_yaml_dynamic(file_path, new_paths, new_service, new_hostname);
-
+                    info!("Received cmd: firebase_upload from {},need change file_path:{}", peer,file_path);
+                    modify_yaml_dynamic(file_path.as_str(), new_paths, new_service, new_hostname);
                     let response_msg = Message::Text("firebase_upload ing".to_string());
                     let mut client_ws_guard = client_ws.lock().await;
                     client_ws_guard.send(response_msg).await;
 
-                    match system_cmd::get_and_restart_container("filebeat").await {
-                        Ok(container_id) => {
-                            println!("Container ID: {:?}", container_id);
-                            return;
+                    let filebeat_config_path = env::var("FILEBEAT_CONFIG_MAIN_PATH")
+                        .unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/filebeat/filebeat.yml".to_string());
+
+                    if env::var("FILEBEAT_CONFIG_MAIN_PATH").is_ok() {
+                        match system_cmd::start_filebeat(filebeat_config_path.as_str()).await {
+                            Ok(()) => {
+                                println!("Filebeat started successfully with config: {}", filebeat_config_path);
+                                return;
+                            }
+                            Err(e) => {
+                                println!("Error: {}", e);
+                                return;
+                            }
                         }
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            return;
+                    } else {
+                        match system_cmd::get_and_restart_container("filebeat").await {
+                            Ok(()) => {
+                                println!("Filebeat container restarted successfully.");
+                                return;
+                            }
+                            Err(e) => {
+                                println!("Error: {}", e);
+                                return;
+                            }
                         }
                     }
                 }

@@ -1,0 +1,16 @@
+http.enabled: true
+http.host: "http://0.0.0.0:5066"
+
+
+# 主配置文件 filebeat.yml
+filebeat.config.inputs:
+  enabled: true
+  path: /usr/share/filebeat/inputs.d/*.yml
+  reload.enabled: true
+  reload.period: 3s  # 每3秒检查一次输入配置文件变化
+
+
+
+# 将收集到的日志统一发往 Logstash
+output.logstash:
+  hosts: ["host.docker.internal:5044"]

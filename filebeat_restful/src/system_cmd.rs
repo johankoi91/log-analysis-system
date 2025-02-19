@@ -2,6 +2,26 @@ use tokio::process::Command;
 use std::str;
 
 
+pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // 执行 Filebeat 启动命令
+    let filebeat_output = Command::new("filebeat")
+        .arg("-e")
+        .arg("-c")
+        .arg(filebeat_config_path)
+        .output()
+        .await?;
+
+    // 检查命令是否成功执行
+    if !filebeat_output.status.success() {
+        return Err(format!("Failed to start Filebeat with config: {}", filebeat_config_path).into());
+    }
+
+    println!("Successfully started Filebeat with config: {}", filebeat_config_path);
+    Ok(())
+}
+
+
+
 pub(crate) async fn get_and_restart_container(service_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     // 执行获取容器 ID 的命令，使用传入的 service_name 来替代固定的 "filebeat"
     let output = Command::new("sh")

@@ -66,8 +66,14 @@ impl WebSocketClient {
                 write.send(Message::Text(send_text)).await.expect("Failed to send message");
                 Ok(WebSocketClient { sender, receiver })
             }
-            Ok(Err(err)) => Err(format!("Failed to connect: {}", err)),
-            Err(e) => Err(format!("Connection timeout after waiting for {} seconds", e)),
+            Ok(Err(err)) => {
+                info!("Failed to connect: {}",err);
+                Err(format!("Failed to connect: {}", err))
+            },
+            Err(e) => {
+                info!("Connection timeout after waiting for {} ",e);
+                Err(format!("Connection timeout after waiting for {} seconds", e))
+            },
         }
     }
 
@@ -83,7 +89,7 @@ impl WebSocketClient {
 
 pub async fn discover_node() -> impl Responder {
     let urls = vec![
-        "localhost:9002",
+        "127.0.0.1:9002",
     ];
 
     // 创建一个 `Mutex` 来确保安全地共享合并结果
@@ -99,13 +105,18 @@ pub async fn discover_node() -> impl Responder {
                     Some(valid_data) => Some(valid_data),
                     None => None,
                 },
-                Err(_) => None,
+                Err(e) => {
+                    info!("WebSocketClient::connect fail: {}",e);
+                    None
+                }
             };
 
             // 如果有数据，则将结果合并
             if let Some(data) = result {
                 let mut combined_data_lock = combined_data.lock().await;
                 combined_data_lock[url] = data; // 将结果放入 `combined_data`
+            } else {
+                info!("WebSocketClient::connect fail");
             }
         })
     }).collect();
