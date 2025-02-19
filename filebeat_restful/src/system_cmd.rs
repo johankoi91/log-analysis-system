@@ -4,7 +4,7 @@ use std::str;
 
 pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     // 执行 Filebeat 启动命令
-    let filebeat_output = Command::new("filebeat")
+    let filebeat_output = Command::new("/usr/local/bin/filebeat")
         .arg("-e")
         .arg("-c")
         .arg(filebeat_config_path)
