@@ -3,7 +3,6 @@ use std::str;
 
 
 pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // 执行 Filebeat 启动命令
     let filebeat_output = Command::new("/usr/local/bin/filebeat")
         .arg("-e")
         .arg("-c")
@@ -11,11 +10,9 @@ pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box
         .output()
         .await?;
 
-    // 检查命令是否成功执行
     if !filebeat_output.status.success() {
         return Err(format!("Failed to start Filebeat with config: {}", filebeat_config_path).into());
     }
-
     println!("Successfully started Filebeat with config: {}", filebeat_config_path);
     Ok(())
 }

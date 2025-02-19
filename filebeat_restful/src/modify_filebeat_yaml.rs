@@ -56,7 +56,6 @@ pub fn modify_yaml_dynamic(file_path: &str, new_paths: Vec<String>, new_service:
     let file = File::open(file_path)?;
     let mut data: Value = from_reader(file)?;
 
-    // 修改第一个配置项的 paths, service 和 hostname
     if let Some(config) = data.get_mut(0) {
         if let Some(paths) = config.get_mut("paths") {
             *paths = Value::Sequence(new_paths.into_iter().map(Value::String).collect());
