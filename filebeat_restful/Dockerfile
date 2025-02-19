@@ -24,7 +24,7 @@ ENV LOG_FILE_PATH="/usr/src/filebeat_restful/log.yaml"
 COPY ./config/filebeat/filebeat.yml /usr/share/filebeat/filebeat.yml
 ENV FILEBEAT_CONFIG_MAIN_PATH="/usr/share/filebeat/filebeat.yml"
 COPY ./config/filebeat/inputs.d /usr/share/filebeat/inputs.d
-ENV FILEBEAT_CONFIG_LOG_PATH="/usr/share/filebeat/inputs.d/log.yaml"
+ENV FILEBEAT_CONFIG_LOG_PATH="/usr/share/filebeat/inputs.d/log.yml"
 
 
 # 确保以 root 用户执行这些操作
@@ -32,7 +32,7 @@ USER root
 
 # 设置适当的权限
 RUN ls -l /usr/share/filebeat && \
-    chown -R root:root /usr/share/filebeat \
+    chown -R root:root /usr/share/filebeat
 
 # 创建启动脚本来启动 Rust 项目和 Filebeat 容器
 COPY start.sh /start.sh
