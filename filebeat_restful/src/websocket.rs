@@ -218,7 +218,7 @@ impl WebSocketServer {
                     let new_paths = vec![json_data["upload_file"].as_str().unwrap_or_default().to_string()];
                     let new_service = json_data["hostname"].as_str().unwrap_or_default().to_string();
                     let new_hostname = json_data["service"].as_str().unwrap_or_default().to_string();
-                    info!("Received cmd: firebase_upload from {},need change file_path:{}", peer,file_path);
+                    info!("Received cmd: firebase_upload from {},need change file_path:{}, new_paths:{}, new_service:{}, new_hostname:{}", peer,file_path,new_paths,new_service,new_hostname);
                     modify_yaml_dynamic(file_path.as_str(), new_paths, new_service, new_hostname);
                     let response_msg = Message::Text("firebase_upload ing".to_string());
                     let mut client_ws_guard = client_ws.lock().await;
@@ -226,7 +226,7 @@ impl WebSocketServer {
 
                     let filebeat_config_path = env::var("FILEBEAT_CONFIG_MAIN_PATH")
                         .unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/filebeat/filebeat.yml".to_string());
-
+                    println!("filebeat_config_path: {}", filebeat_config_path);
                     if env::var("FILEBEAT_CONFIG_MAIN_PATH").is_ok() {
                         match system_cmd::start_filebeat(filebeat_config_path.as_str()).await {
                             Ok(()) => {

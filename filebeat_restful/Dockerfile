@@ -1,5 +1,7 @@
 # 使用 Rust 的官方镜像来构建 Rust 应用
-FROM rust:latest as builder
+#FROM rust:latest as builder
+FROM --platform=linux/amd64 rust:latest as builder
+
 
 # 设置工作目录
 WORKDIR /usr/src/filebeat_restful
@@ -11,7 +13,7 @@ COPY . .
 RUN cargo build --release
 
 # 使用 Filebeat 官方镜像作为基础镜像
-FROM docker.elastic.co/beats/filebeat:8.17.0
+FROM --platform=linux/amd64 docker.elastic.co/beats/filebeat:8.17.0
 
 # 复制构建好的 Rust 可执行文件到容器
 COPY --from=builder /usr/src/filebeat_restful/target/release/filebeat_restful /usr/local/bin/

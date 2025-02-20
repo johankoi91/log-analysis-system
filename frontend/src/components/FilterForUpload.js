@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
 import { Select, Button, Row, Col, Typography, Popover, Tag, message } from 'antd';
 import './LogSearch.css'; // Custom styles
@@ -7,6 +7,8 @@ const { Option } = Select;
 const { Text } = Typography;
 
 const FilterForUpload = () => {
+    // Ref to hold WebSocket connection
+    const socketRef = useRef(null);
     const [filters, setFilters] = useState({
         hostname: "",
         service:  "",
@@ -91,6 +93,55 @@ const FilterForUpload = () => {
 
         setFilterTag(filterContent);  // Set the filter tag
         setPopoverVisible(false);
+
+        if (!filters.hostname || !filters.basename || !filters.dir || !filters.service) {
+            console.log("handleSearch---",filters);
+            message.error("All fields are required.");
+            return;
+        }
+
+
+        // // Ensure WebSocket connection is established
+        // if (!socketRef.current) {
+        //     socketRef.current = new WebSocket(`ws://${filters.hostname}`);  // WebSocket address based on filters.hostname
+        // }
+
+
+
+        if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+            socketRef.current.close();
+        }
+
+        // Create a new WebSocket connection each time
+        socketRef.current = new WebSocket(`ws://${filters.hostname}`);
+
+
+        socketRef.current.onopen = () => {
+            console.log("socketRef onopen:");  // Handle the response from the server
+            const messagePayload = {
+                    upload_file: filters.dir + filters.basename,
+                    service: filters.service,
+                    hostname: filters.hostname,  // Sending cmd: firebase_upload
+                    cmd: "firebase_upload",  // Sending cmd: firebase_upload
+        };
+            socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
+            console.log("Message sent:", messagePayload);
+        };
+
+        socketRef.current.onmessage = (event) => {
+            console.log("Message received:", event.data);  // Handle the response from the server
+            // You can handle the server response here as needed
+        };
+
+        socketRef.current.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            message.error("Error occurred while connecting to WebSocket.");
+        };
+
+        socketRef.current.onclose = () => {
+            console.log("WebSocket connection closed.");
+        };
+
     };
 
     const handleTagDelete = () => {

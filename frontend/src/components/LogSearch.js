@@ -29,8 +29,6 @@ const LogSearch = () => {
     const [endTime, setEndTime] = useState("");
     const [contextData, setContextData] = useState([]);
 
-    // Ref to hold WebSocket connection
-    const socketRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);

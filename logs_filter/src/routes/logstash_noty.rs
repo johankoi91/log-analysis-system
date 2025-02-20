@@ -19,7 +19,7 @@ pub async fn logstash_noty(
     println!("Request Body: {:?}", request);
 
     // 返回 JSON 格式的结果
-            web::Json(json!({ "results": "ok" }))
+    web::Json(json!({ "results": "ok" }))
 }
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {

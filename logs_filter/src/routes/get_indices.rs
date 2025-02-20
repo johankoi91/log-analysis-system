@@ -26,8 +26,6 @@ pub async fn get_indices(es: web::Data<Elasticsearch>) -> impl Responder {
                 .map(|index| index.to_string())
                 .collect();
 
-
-
             // 返回索引名数组
             web::Json(json!({ "indices": indices }))
         }

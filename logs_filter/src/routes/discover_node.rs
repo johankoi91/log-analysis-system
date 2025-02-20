@@ -85,11 +85,12 @@ impl WebSocketClient {
         }
     }
 }
-
+// http://10.62.0.84/
 
 pub async fn discover_node() -> impl Responder {
     let urls = vec![
-        "127.0.0.1:9002",
+        // "127.0.0.1:9002",
+        "10.62.0.84:9002",
     ];
 
     // 创建一个 `Mutex` 来确保安全地共享合并结果
@@ -111,7 +112,6 @@ pub async fn discover_node() -> impl Responder {
                 }
             };
 
-            // 如果有数据，则将结果合并
             if let Some(data) = result {
                 let mut combined_data_lock = combined_data.lock().await;
                 combined_data_lock[url] = data; // 将结果放入 `combined_data`
