@@ -1,0 +1,10 @@
+- type: filestream
+  id: RTC
+  enabled: true
+  paths:
+  - /var/log/agora/67ab22aea6eb2a0001f426acv33VtBqzr.txt
+  fields:
+    service: RTC
+    hostname: localhost:9002
+  scan_frequency: 2s
+  fields_under_root: true
