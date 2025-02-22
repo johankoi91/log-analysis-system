@@ -85,7 +85,6 @@ impl WebSocketClient {
         }
     }
 }
-// http://10.62.0.84/
 
 pub async fn discover_node() -> impl Responder {
     let urls = vec![

@@ -131,7 +131,7 @@ pub async fn keyword_search(
                 "_index": index,
                 "file_name": file_name,
                 "message": message,
-                "@timestamp": timestamp,
+                "timestamp": timestamp,
                 "service": service,
                 "hostname": hostname
                 });

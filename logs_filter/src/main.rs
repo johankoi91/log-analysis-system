@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     info!("Starting Actix Web server...");
-    let transport = Transport::single_node("http://localhost:9200").unwrap();
+    let transport = Transport::single_node("http://10.62.0.93:9200").unwrap();
     let es_client = Elasticsearch::new(transport);
     let data_es_client = web::Data::new(es_client);  // 使用 `Data::new` 包装客户端
 

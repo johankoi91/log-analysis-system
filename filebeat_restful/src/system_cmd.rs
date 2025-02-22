@@ -1,9 +1,9 @@
 use tokio::process::Command;
 use std::str;
-
+use log::info;
 
 pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let filebeat_output = Command::new("/usr/local/bin/filebeat")
+    let filebeat_output = Command::new("/usr/share/filebeat/filebeat")
         .arg("-e")
         .arg("-c")
         .arg(filebeat_config_path)
@@ -13,7 +13,7 @@ pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box
     if !filebeat_output.status.success() {
         return Err(format!("Failed to start Filebeat with config: {}", filebeat_config_path).into());
     }
-    println!("Successfully started Filebeat with config: {}", filebeat_config_path);
+    info!("Successfully started Filebeat with config: {}", filebeat_config_path);
     Ok(())
 }
 
@@ -33,7 +33,7 @@ pub(crate) async fn get_and_restart_container(service_name: &str) -> Result<(), 
 
     // 从命令输出中提取容器 ID
     let container_id = str::from_utf8(&output.stdout)?.trim().to_string();
-    println!("Container ID for '{}': {}", service_name, container_id);
+    info!("Container ID for '{}': {}", service_name, container_id);
 
     // 执行 docker restart 命令重启容器
     let restart_output = Command::new("docker")
@@ -46,6 +46,6 @@ pub(crate) async fn get_and_restart_container(service_name: &str) -> Result<(), 
         return Err(format!("Failed to restart container: {}", container_id).into());
     }
 
-    println!("Successfully restarted container: {}", container_id);
+    info!("Successfully restarted container: {}", container_id);
     Ok(())
 }

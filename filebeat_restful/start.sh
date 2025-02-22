@@ -4,4 +4,4 @@
 /usr/local/bin/filebeat_restful &
 
 # 启动 Filebeat 容器
-filebeat -e -c /usr/share/filebeat/filebeat.yml
+/usr/share/filebeat/filebeat -e -c /usr/share/filebeat/filebeat.yml

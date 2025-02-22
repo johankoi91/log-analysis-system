@@ -29,20 +29,9 @@ const LogSearch = () => {
     const [endTime, setEndTime] = useState("");
     const [contextData, setContextData] = useState([]);
 
-
     useEffect(() => {
-        setLoading(true);
-        axios.get("http://localhost:8080/get_indices")
-            .then(response => {
-                const indexList = response.data.indices;
-                setIndices(indexList);
-                if (indexList.length > 0) {
-                    setEsIndex(indexList[0]);
-                }
-            })
-            .finally(() => setLoading(false));
+        refreshElasticSearch();
     }, []);
-
 
     const fetchFieldOptions = (field) => {
         setFilterLoading(true);
@@ -88,6 +77,19 @@ const LogSearch = () => {
         }).then(response => {
             setResults(response.data.results);
         });
+    };
+
+    const refreshElasticSearch = () => {
+        setLoading(true);
+        axios.get("http://localhost:8080/get_indices")
+            .then(response => {
+                const indexList = response.data.indices;
+                setIndices(indexList);
+                if (indexList.length > 0) {
+                    setEsIndex(indexList[0]);
+                }
+            })
+            .finally(() => setLoading(false));
     };
 
     const handleContextClick = (timestamp) => {
@@ -178,6 +180,11 @@ const LogSearch = () => {
 
     return (
         <div className="log-search-container" style={{width: '100%'}}>
+            <Col style={{width: '250px',marginBottom: 25}}>
+                {/*<DateRangePicker onDateChange={handleDateChange}/>*/}
+                <Button type="primary" onClick={refreshElasticSearch}>RefreshElastic</Button>
+            </Col>
+
             <Row gutter={[16, 16]} align="middle" style={{display: 'flex', justifyContent: 'space-between'}}>
                 <Col style={{width: '200px'}}>
                     <Select
@@ -217,9 +224,6 @@ const LogSearch = () => {
                     />
                 </Col>
 
-                <Col style={{width: '250px'}}>
-                    <DateRangePicker onDateChange={handleDateChange}/>
-                </Col>
 
                 <Col style={{width: '110px'}}>
                     <Button type="primary" onClick={handleSearch}>Search</Button>
@@ -247,7 +251,7 @@ const LogSearch = () => {
                 )}
             </div>
 
-            <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+            <div style={{maxHeight: '800px', overflowY: 'auto'}}>
                 <List
                     itemLayout="horizontal"
                     dataSource={results}
@@ -257,7 +261,7 @@ const LogSearch = () => {
                             <List.Item.Meta
                                 title={
                                     <Tooltip
-                                        title={`Basename: ${item.basename} \nHostname: ${item.hostname} \nTimestamp: ${item.timestamp}`}>
+                                        title={`file_name: ${item.file_name} \nHostname: ${item.hostname} \nTimestamp: ${item.timestamp}`}>
                                         <Text strong>{item.message.replace(/"/g, "")}</Text>
                                     </Tooltip>
                                 }
