@@ -214,7 +214,7 @@ impl WebSocketServer {
 
             if let Ok(json_data) = serde_json::from_str::<Value>(&text) {
                 if json_data["cmd"].as_str() == Some("firebase_upload") {
-                    let file_path = env::var("FILEBEAT_CONFIG_LOG_PATH").unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/filebeat/inputs.d/log.yml".to_string());
+                    let file_path = env::var("FILEBEAT_CONFIG_LOG_PATH").unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/filebeat/inputs.d/log.yml".to_string());
                     let new_paths = vec![json_data["upload_file"].as_str().unwrap_or_default().to_string()];
                     let new_hostname = json_data["hostname"].as_str().unwrap_or_default().to_string();
                     let new_service = json_data["service"].as_str().unwrap_or_default().to_string();
@@ -225,7 +225,7 @@ impl WebSocketServer {
                     client_ws_guard.send(response_msg).await;
 
                     let filebeat_config_path = env::var("FILEBEAT_CONFIG_MAIN_PATH")
-                        .unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/config/filebeat/filebeat.yml".to_string());
+                        .unwrap_or_else(|_| "/Users/hanxiaoqing/log-searching/filebeat_restful/filebeat/filebeat.yml".to_string());
                     info!("filebeat_config_path: {}", filebeat_config_path);
                     if env::var("FILEBEAT_CONFIG_MAIN_PATH").is_ok() {
                         match system_cmd::start_filebeat(filebeat_config_path.as_str()).await {

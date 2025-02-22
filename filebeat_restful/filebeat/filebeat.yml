@@ -13,4 +13,4 @@ filebeat.config.inputs:
 
 # 将收集到的日志统一发往 Logstash
 output.logstash:
-  hosts: ["host.docker.internal:5044"]
+  hosts: ["10.62.0.93:5044"]

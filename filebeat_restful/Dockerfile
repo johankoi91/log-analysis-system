@@ -19,15 +19,14 @@ FROM --platform=linux/amd64 docker.elastic.co/beats/filebeat:8.17.0
 COPY --from=builder /usr/src/filebeat_restful/target/release/filebeat_restful /usr/local/bin/
 
 # 设置 LOG_FILE_PATH 环境变量
-COPY ./config/log.yaml /usr/src/filebeat_restful/log.yaml
-ENV LOG_FILE_PATH="/usr/src/filebeat_restful/log.yaml"
+COPY ./config /usr/src/filebeat_restful/config
+ENV LOG_FILE_PATH="/usr/src/filebeat_restful/config/log.yaml"
 
 # 复制 Filebeat 配置文件和日志目录
-COPY ./config/filebeat/filebeat.yml /usr/share/filebeat/filebeat.yml
-ENV FILEBEAT_CONFIG_MAIN_PATH="/usr/share/filebeat/filebeat.yml"
-COPY ./config/filebeat/inputs.d /usr/share/filebeat/inputs.d
+COPY ./filebeat/filebeat.yml /usr/share/filebeat/filebeat.yml
+COPY ./filebeat/inputs.d /usr/share/filebeat/inputs.d
 ENV FILEBEAT_CONFIG_LOG_PATH="/usr/share/filebeat/inputs.d/log.yml"
-
+ENV FILEBEAT_CONFIG_MAIN_PATH="/usr/share/filebeat/filebeat.yml"
 
 # 确保以 root 用户执行这些操作
 USER root
