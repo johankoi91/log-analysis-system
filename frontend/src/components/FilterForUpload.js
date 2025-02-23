@@ -100,14 +100,6 @@ const FilterForUpload = () => {
             return;
         }
 
-
-        // // Ensure WebSocket connection is established
-        // if (!socketRef.current) {
-        //     socketRef.current = new WebSocket(`ws://${filters.hostname}`);  // WebSocket address based on filters.hostname
-        // }
-
-
-
         if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
             socketRef.current.close();
         }

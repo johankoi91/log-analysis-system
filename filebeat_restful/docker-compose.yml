@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  filebeat_restful_1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - LOG_FILE_PATH=/usr/src/filebeat_restful/config/log.yaml
+      - FILEBEAT_CONFIG_LOG_PATH=/usr/share/filebeat/inputs.d/log.yml
+      - FILEBEAT_CONFIG_MAIN_PATH=/usr/share/filebeat/filebeat.yml
+    volumes:
+      # 映射主机目录到容器内的目录，确保 Filebeat 配置文件正确加载
+      - /var/log/agora:/var/log/agora:ro
+      - /home/yuxuan/hxq/filebeat_restful/config:/usr/src/filebeat_restful/config:ro
+      - /home/yuxuan/hxq/filebeat_restful/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /home/yuxuan/hxq/filebeat_restful/filebeat/inputs.d:/usr/share/filebeat/inputs.d:ro  # 确保这个目录存在
+    ports:
+      - "5066:5066"
+      - "9002:9002"
+    network_mode: "host"
+    user: root
+    command: ["/start.sh"]
+    stdin_open: true
+    tty: true

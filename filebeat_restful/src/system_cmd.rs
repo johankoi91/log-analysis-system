@@ -3,18 +3,44 @@ use std::str;
 use log::info;
 
 pub(crate) async fn start_filebeat(filebeat_config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // let filebeat_output = Command::new("/usr/share/filebeat/filebeat")
+    //     .arg("-e")
+    //     .arg("-c")
+    //     .arg(filebeat_config_path)
+    //     .output()
+    //     .await?;
+    //
+    // if !filebeat_output.status.success() {
+    //     return Err(format!("Failed to start Filebeat with config: {}", filebeat_config_path).into());
+    // }
+    // info!("Successfully started Filebeat with config: {}", filebeat_config_path);
+    // Ok(())
+
     let filebeat_output = Command::new("/usr/share/filebeat/filebeat")
         .arg("-e")
         .arg("-c")
         .arg(filebeat_config_path)
         .output()
-        .await?;
+        .await;
 
-    if !filebeat_output.status.success() {
-        return Err(format!("Failed to start Filebeat with config: {}", filebeat_config_path).into());
+    match filebeat_output {
+        Ok(output) => {
+            if !output.status.success() {
+                // 打印出标准输出和标准错误信息
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(format!(
+                    "Failed to start Filebeat with config: {}\nStdout: {}\nStderr: {}",
+                    filebeat_config_path, stdout, stderr
+                ).into());
+            }
+            Ok(())
+        }
+        Err(e) => {
+            // 如果启动命令本身失败，打印出错误信息
+            Err(format!("Failed to execute command: {}", e).into())
+        }
     }
-    info!("Successfully started Filebeat with config: {}", filebeat_config_path);
-    Ok(())
 }
 
 

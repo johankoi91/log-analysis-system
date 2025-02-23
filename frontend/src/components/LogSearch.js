@@ -92,9 +92,9 @@ const LogSearch = () => {
             .finally(() => setLoading(false));
     };
 
-    const handleContextClick = (timestamp) => {
-        return;
-        const date = new Date(timestamp);
+    const handleContextClick = (item) => {
+        // return;
+        const date = new Date(item.timestamp);
         if (isNaN(date.getTime())) {
             message.error("Invalid timestamp.");
             return;
@@ -116,12 +116,12 @@ const LogSearch = () => {
         const formattedEndTime = endTime.toISOString();
 
         const requestData = {
-            start_time: formattedStartTime,
+            start_time: item.timestamp,
             end_time: formattedEndTime,
             es_index: es_index,
-            hostname: filters.hostname,
-            service: filters.service,
-            basename: filters.basename
+            hostname: item.hostname,
+            service: item.service,
+            basename: item.file_name
         };
 
         axios.post("http://localhost:8080/get_log_context", requestData)
@@ -257,7 +257,7 @@ const LogSearch = () => {
                     dataSource={results}
                     renderItem={item => (
                         <List.Item style={{fontSize: '12px', padding: '8px'}}
-                                   onClick={() => handleContextClick(item.timestamp)}>
+                                   onClick={() => handleContextClick(item)}>
                             <List.Item.Meta
                                 title={
                                     <Tooltip

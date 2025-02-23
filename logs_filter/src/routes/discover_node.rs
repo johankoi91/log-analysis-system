@@ -88,7 +88,7 @@ impl WebSocketClient {
 
 pub async fn discover_node() -> impl Responder {
     let urls = vec![
-        // "127.0.0.1:9002",
+        "127.0.0.1:9002",
         "10.62.0.84:9002",
     ];
 
