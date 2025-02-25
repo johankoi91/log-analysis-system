@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import LogSearch from './components/LogSearch';  // Existing LogSearch component
-import SelectLogFile from './components/./SelectLogFile';
+import LogSearch from './components/LogSearch';
+import SelectLogFile from './components/SelectLogFile';
 import { Layout, Menu } from 'antd';
 
 const { Sider, Content } = Layout;
 
 function App() {
-    // State to manage the active page
-    const [activePage, setActivePage] = useState('logSearch'); // Default to 'logSearch'
+    const [activePage, setActivePage] = useState('LogFileSelect'); // Default to 'LogFileSelect'
 
-    // Handle menu item click
     const handleMenuClick = (e) => {
         setActivePage(e.key);
     };
@@ -19,12 +17,12 @@ function App() {
             <Sider width={200} className="site-layout-background">
                 <Menu
                     mode="inline"
-                    defaultSelectedKeys={['LogFileSelect']}
+                    selectedKeys={[activePage]} // Keep track of the selected page
                     style={{ height: '100%', borderRight: 0 }}
                     onClick={handleMenuClick}
                 >
                     <Menu.Item key="LogFileSelect">Log File Select</Menu.Item>
-                    <Menu.Item key="ESSearch">ES Keyword Search</Menu.Item>
+                    <Menu.Item key="LogSearch">Log Search</Menu.Item>
                 </Menu>
             </Sider>
             <Layout style={{ padding: '0 24px 24px' }}>
@@ -35,9 +33,13 @@ function App() {
                         minHeight: 280,
                     }}
                 >
-                    {/* Conditionally render the components based on the active page */}
-                    {activePage === 'ESSearch' && <LogSearch />}
-                    {activePage === 'LogFileSelect' && <SelectLogFile />}
+                    {/* Use visibility and display to control the visibility of components */}
+                    <div style={{ display: activePage === 'LogFileSelect' ? 'block' : 'none' }}>
+                        <SelectLogFile />
+                    </div>
+                    <div style={{ display: activePage === 'LogSearch' ? 'block' : 'none' }}>
+                        <LogSearch />
+                    </div>
                 </Content>
             </Layout>
         </Layout>

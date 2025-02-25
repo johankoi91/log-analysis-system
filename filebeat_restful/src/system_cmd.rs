@@ -65,53 +65,6 @@ pub(crate) async fn get_and_restart_container(service_name: &str) -> Result<(), 
     Ok(())
 }
 
-/// 执行多层 grep 命令，支持通过管道进行逐层查找
-// pub(crate) async fn grep_multiple_layers(path: &str, patterns: Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
-//     // 确保 patterns 至少有一个元素
-//     if patterns.is_empty() {
-//         return Err("No patterns provided".into());
-//     }
-//
-//     // 初始化 shell 命令，首先处理第一个模式
-//     let mut cmd = format!("grep -a '{}'", patterns[0]);
-//
-//     // 为每个模式添加 grep 命令并连接管道
-//     for pattern in patterns.iter().skip(1) {
-//         cmd = format!("{} | grep -a '{}'", cmd, pattern);
-//     }
-//
-//     // 将路径添加到命令的末尾
-//     cmd = format!("{} {}", cmd, path);
-//
-//     // 使用 sh 执行命令
-//     let mut current_command = Command::new("sh");
-//     current_command.arg("-c").arg(cmd);
-//
-//     // 执行命令并获取输出
-//     let output = current_command.output().await;
-//
-//     match output {
-//         Ok(output) => {
-//             if !output.status.success() {
-//                 // 如果命令失败，打印标准输出和标准错误信息
-//                 let stdout = String::from_utf8_lossy(&output.stdout);
-//                 let stderr = String::from_utf8_lossy(&output.stderr);
-//                 return Err(format!(
-//                     "grep command failed with status: {}\nStdout: {}\nStderr: {}",
-//                     output.status, stdout, stderr
-//                 ).into());
-//             }
-//
-//             // 返回命令的标准输出作为结果
-//             let result = String::from_utf8_lossy(&output.stdout).to_string();
-//             Ok(result)
-//         }
-//         Err(e) => {
-//             // 如果执行命令本身失败，打印错误信息
-//             Err(format!("Failed to execute grep command: {}", e).into())
-//         }
-//     }
-// }
 
 pub(crate) async fn grep_multiple_layers(path: &str, patterns: Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
     // 初始化命令

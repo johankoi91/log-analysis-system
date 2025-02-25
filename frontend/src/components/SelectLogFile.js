@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
-import { Select, Button, Row, Col, Typography, Popover, Tag, message } from 'antd';
+import { Select, Button, Row, Col, Typography, Popover, Tag, message, Input, List} from 'antd';
 import './LogSearch.css'; // Custom styles
 
 const { Option } = Select;
@@ -23,6 +23,21 @@ const SelectLogFile = () => {
     const [filterData, setFilterData] = useState({});  // Storing filter data from /discover_node
     const [popoverVisible, setPopoverVisible] = useState(false);
     const [filterTag, setFilterTag] = useState("");  // Store the filter tag
+
+    const [filterStrings, setFilterStrings] = useState({
+        keyword1: "",
+        keyword2: ""
+    });
+
+    // New state to store WebSocket response data
+    const [serverResponse, setServerResponse] = useState("");
+
+    const handleKeywordChange = (e, keyword) => {
+        setFilterStrings({
+            ...filterStrings,
+            [keyword]: e.target.value
+        });
+    };
 
     // Fetching the filter data from discover_node and setting filterData
     useEffect(() => {
@@ -81,7 +96,7 @@ const SelectLogFile = () => {
         }
     };
 
-    const handleAddFilter = () => {
+    const handleAddTag = () => {
         const filterContent = [
             filters.hostname ? `hostname: ${filters.hostname}` : '',
             filters.service ? `service: ${filters.service}` : '',
@@ -93,33 +108,27 @@ const SelectLogFile = () => {
 
         setFilterTag(filterContent);  // Set the filter tag
         setPopoverVisible(false);
+    };
 
+    const grepLogFile = () => {
         if (!filters.hostname || !filters.basename || !filters.dir || !filters.service) {
-            console.log("handleSearch---",filters);
             message.error("All fields are required.");
             return;
         }
-
         if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
             socketRef.current.close();
         }
-
         // Create a new WebSocket connection each time
         socketRef.current = new WebSocket(`ws://${filters.hostname}`);
 
+        // Construct filter strings with AND relationship
+        const { keyword1, keyword2 } = filterStrings;
 
         socketRef.current.onopen = () => {
             console.log("socketRef onopen:");  // Handle the response from the server
-            // const messagePayload = {
-            //         upload_file: filters.dir + filters.basename,
-            //         service: filters.service,
-            //         hostname: filters.hostname,  // Sending cmd: firebase_upload
-            //         cmd: "firebase_upload",  // Sending cmd: firebase_upload
-            // };
-
             const messagePayload = {
                 cmd: "file_grep",
-                filter_strings: ["uid","771498849"],
+                filter_strings: [keyword1,keyword2],
                 file_path:  filters.dir + filters.basename,
             };
             socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
@@ -128,7 +137,7 @@ const SelectLogFile = () => {
 
         socketRef.current.onmessage = (event) => {
             console.log("Message received:", event.data);  // Handle the response from the server
-            // You can handle the server response here as needed
+            setServerResponse(event.data);
         };
 
         socketRef.current.onerror = (error) => {
@@ -139,8 +148,7 @@ const SelectLogFile = () => {
         socketRef.current.onclose = () => {
             console.log("WebSocket connection closed.");
         };
-
-    };
+    }
 
     const handleTagDelete = () => {
         setFilterTag("");
@@ -203,8 +211,8 @@ const SelectLogFile = () => {
                     </Select>
                 </Col>
             </Row>
-            <Button type="primary" onClick={handleAddFilter} style={{ marginTop: 10 }}>
-                Upload To Elasticsearch
+            <Button type="primary" onClick={handleAddTag} style={{ marginTop: 10 }}>
+                Show which log selected
             </Button>
         </div>
     );
@@ -243,6 +251,51 @@ const SelectLogFile = () => {
                         </span>
                     </Tag>
                 )}
+            </div>
+
+            {/* New input fields for the keywords */}
+            <Row gutter={16} style={{ marginTop: '20px' }}>
+                <Col span={11}>
+                    <Input
+                        placeholder="Enter first keyword"
+                        value={filterStrings.keyword1}
+                        onChange={(e) => handleKeywordChange(e, "keyword1")}
+                    />
+                </Col>
+                <Col span={2} style={{ textAlign: 'center', paddingTop: '10px' }}>
+                    <Text>AND</Text>
+                </Col>
+                <Col span={11}>
+                    <Input
+                        placeholder="Enter second keyword"
+                        value={filterStrings.keyword2}
+                        onChange={(e) => handleKeywordChange(e, "keyword2")}
+                    />
+                </Col>
+                <Col span={11}>
+                    <Button type="primary" onClick={grepLogFile} style={{ marginTop: 10 }}>
+                        Grep
+                    </Button>
+                </Col>
+            </Row>
+
+            {/*<div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>*/}
+            {/*    <Text>Server Response:</Text>*/}
+            {/*    <pre>{serverResponse}</pre>*/}
+            {/*</div>*/}
+
+            {/* Displaying server response below */}
+            <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                <Text>Server Response:</Text>
+                {/* Display each line of the server response as a list item */}
+                <List
+                    dataSource={serverResponse.split('\n')}
+                    renderItem={(item, index) => (
+                        <List.Item key={index}>
+                            <Text>{item}</Text>
+                        </List.Item>
+                    )}
+                />
             </div>
         </div>
     );
