@@ -9,6 +9,8 @@ const {Option} = Select;
 const {Text} = Typography;
 
 const LogSearch = () => {
+    const socketRef = useRef(null);
+
     const [indices, setIndices] = useState([]);
     const [es_index, setEsIndex] = useState("");
     const [filters, setFilters] = useState({
@@ -92,44 +94,61 @@ const LogSearch = () => {
             .finally(() => setLoading(false));
     };
 
+    const splitLogMessage = (logMessage) => {
+        // Split the log message into words (split by spaces)
+        const words = logMessage.split(" ");
+
+        // Calculate the middle index of the words array
+        const middleIndex = Math.floor(words.length / 2);
+
+        // Define the range around the middle index that you want to extract (for example, 2 words before and 2 words after)
+        const rangeStart = Math.max(middleIndex - 2, 0); // Ensure start index is not negative
+        const rangeEnd = Math.min(middleIndex + 2, words.length - 1); // Ensure end index is within bounds
+
+        // Slice the array from rangeStart to rangeEnd (inclusive)
+        const selectedWords = words.slice(0, 4);
+
+        // Join the selected words back into a string
+        return selectedWords.join(" ");
+    }
+
+
     const handleContextClick = (item) => {
-        // return;
-        const date = new Date(item.timestamp);
-        if (isNaN(date.getTime())) {
-            message.error("Invalid timestamp.");
-            return;
+        if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+            socketRef.current.close();
         }
-
-        let milliseconds = date.getMilliseconds();
-        if (milliseconds > 900) {
-            date.setSeconds(date.getSeconds() + 1);
-            date.setMilliseconds(0);
-        } else if (milliseconds < 100) {
-            date.setSeconds(date.getSeconds() - 1);
-            date.setMilliseconds(1000);
-        }
-
-        const startTime = new Date(date.getTime() - 100);
-        const endTime = new Date(date.getTime() + 100);
-
-        const formattedStartTime = startTime.toISOString();
-        const formattedEndTime = endTime.toISOString();
-
-        const requestData = {
-            start_time: item.timestamp,
-            end_time: formattedEndTime,
-            es_index: es_index,
-            hostname: item.hostname,
-            service: item.service,
-            basename: item.file_name
+        // Create a new WebSocket connection each time
+        socketRef.current = new WebSocket(`ws://${item.hostname}`);
+        socketRef.current.onopen = () => {
+            console.log("socketRef onopen:");  // Handle the response from the server
+            let sp = splitLogMessage(item.message);
+            console.log("socketRef open, splitLogMessage: ",sp);
+            const messagePayload = {
+                cmd: "file_grep",
+                filter_strings: [sp],
+                file_path:  item.file_name,
+                context_line:  4,
+            };
+            socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
+            console.log("Message sent:", messagePayload);
         };
 
-        axios.post("http://localhost:8080/get_log_context", requestData)
-            .then(response => {
-                setContextData(response.data.log_context);
-            })
-            .catch(error => message.error("Failed to fetch log context"));
+        socketRef.current.onmessage = (event) => {
+            console.log("Message received:", event.data);  // Handle the response from the server
+            setContextData(event.data);
+        };
+
+        socketRef.current.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            message.error("Error occurred while connecting to WebSocket.");
+        };
+
+        socketRef.current.onclose = () => {
+            console.log("WebSocket connection closed.");
+        };
     };
+
+
 
 
     const handleDateChange = (formattedStart, formattedEnd) => {

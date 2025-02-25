@@ -130,6 +130,7 @@ const SelectLogFile = () => {
                 cmd: "file_grep",
                 filter_strings: [keyword1,keyword2],
                 file_path:  filters.dir + filters.basename,
+                context_line: 0,
             };
             socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
             console.log("Message sent:", messagePayload);
@@ -278,11 +279,6 @@ const SelectLogFile = () => {
                     </Button>
                 </Col>
             </Row>
-
-            {/*<div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>*/}
-            {/*    <Text>Server Response:</Text>*/}
-            {/*    <pre>{serverResponse}</pre>*/}
-            {/*</div>*/}
 
             {/* Displaying server response below */}
             <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>

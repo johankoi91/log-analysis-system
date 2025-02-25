@@ -66,26 +66,27 @@ pub(crate) async fn get_and_restart_container(service_name: &str) -> Result<(), 
 }
 
 
-pub(crate) async fn grep_multiple_layers(path: &str, patterns: Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
-    // 初始化命令
+pub(crate) async fn grep_multiple_layers(path: &str, patterns: Vec<String>, context_line: i64) -> Result<String, Box<dyn std::error::Error>> {
     let mut command = String::new();
 
     // 拼接第一个 grep 命令
-    command.push_str(&format!("grep -a {} {}", patterns[0], path));
+    if  { context_line <= 0 } {
+        command.push_str(&format!("grep -a {} {}", patterns[0], path));
+    } else {
+        command.push_str(&format!("grep -C {} -a {} {}", context_line, patterns[0], path));
+    }
 
     // 拼接后续的 grep 命令
     for pattern in patterns.iter().skip(1) {
         command.push_str(&format!(" | grep -a {}", pattern));
     }
 
-    // 执行拼接后的命令
     let output = Command::new("bash")
         .arg("-c")
         .arg(command) // 使用 bash 执行拼接的命令字符串
         .output()
         .await?;
 
-    // 获取最终的输出并转换为字符串
     let result = String::from_utf8_lossy(&output.stdout).to_string();
     Ok(result)
 }

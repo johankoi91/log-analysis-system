@@ -8,12 +8,13 @@ use async_tungstenite::{
 };
 use futures::prelude::*;
 use log::*;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use serde_yaml;
 use std::fs::read_dir;
 use std::ptr::read;
 use std::{fs, sync::Arc};
+use std::any::Any;
 use tokio::sync::{broadcast, Mutex};
 use std::env;
 
@@ -148,7 +149,6 @@ impl WebSocketServer {
         let ws_stream = Arc::new(Mutex::new(ws_stream)); // Wrap WebSocketStream inside a Mutex
 
         info!("New WebSocket connection: {}", peer);
-
         let mut clients_lock = clients.lock().await;
         clients_lock.push(ws_stream.clone()); // Use Arc::clone to share the reference
 
@@ -264,10 +264,11 @@ impl WebSocketServer {
 
                     // 提取 file_path 字段，若没有则返回默认空字符串
                     let file_path = json_data["file_path"].as_str().unwrap_or_default().to_string();
+                    let context_line = json_data["context_line"].as_i64().unwrap_or_default();
 
                     // 打印日志
                     info!("Received cmd: file_grep  file_path: {}, filter_strings: {:?}", file_path, filter_strings);
-                    let grep_result = system_cmd::grep_multiple_layers(&file_path, filter_strings).await;
+                    let grep_result = system_cmd::grep_multiple_layers(&file_path, filter_strings,context_line).await;
 
                     // 将 grep_result 作为响应消息发送到客户端
                     let response_msg = Message::Text(grep_result.expect("REASON"));
