@@ -251,6 +251,29 @@ impl WebSocketServer {
                         }
                     }
                 }
+                if json_data["cmd"].as_str() == Some("file_grep") {
+                    // 提取 filter_strings 并转换为 Vec<String>
+                    let filter_strings: Vec<String> = json_data["filter_strings"]
+                        .as_array()  // 尝试从 JSON 中获取一个数组
+                        .and_then(|arr| {
+                            // 如果 arr 存在，返回一个新的 Vec<String>，否则返回 None
+                            Some(arr.iter().map(|v| v.to_string()).collect())
+                        })
+                        .unwrap_or_default();  // 如果没有 filter_strings 或不是数组，使用空的 Vec<String>
+
+
+                    // 提取 file_path 字段，若没有则返回默认空字符串
+                    let file_path = json_data["file_path"].as_str().unwrap_or_default().to_string();
+
+                    // 打印日志
+                    info!("Received cmd: file_grep  file_path: {}, filter_strings: {:?}", file_path, filter_strings);
+                    let grep_result = system_cmd::grep_multiple_layers(&file_path, filter_strings).await;
+
+                    // 将 grep_result 作为响应消息发送到客户端
+                    let response_msg = Message::Text(grep_result.expect("REASON"));
+                    let mut client_ws_guard = client_ws.lock().await;
+                    client_ws_guard.send(response_msg).await;
+                }
                 return;
             }
         } else if msg.is_binary() {

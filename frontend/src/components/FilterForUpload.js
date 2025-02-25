@@ -110,12 +110,18 @@ const FilterForUpload = () => {
 
         socketRef.current.onopen = () => {
             console.log("socketRef onopen:");  // Handle the response from the server
+            // const messagePayload = {
+            //         upload_file: filters.dir + filters.basename,
+            //         service: filters.service,
+            //         hostname: filters.hostname,  // Sending cmd: firebase_upload
+            //         cmd: "firebase_upload",  // Sending cmd: firebase_upload
+            // };
+
             const messagePayload = {
-                    upload_file: filters.dir + filters.basename,
-                    service: filters.service,
-                    hostname: filters.hostname,  // Sending cmd: firebase_upload
-                    cmd: "firebase_upload",  // Sending cmd: firebase_upload
-        };
+                cmd: "file_grep",
+                filter_strings: ["uid","771498849"],
+                file_path:  filters.dir + filters.basename,
+            };
             socketRef.current.send(JSON.stringify(messagePayload));  // Send the message to the WebSocket server
             console.log("Message sent:", messagePayload);
         };
