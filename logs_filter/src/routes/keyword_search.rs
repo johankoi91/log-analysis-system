@@ -32,10 +32,6 @@ pub async fn keyword_search(
             {
                 "field": "@timestamp",
                 "format": "strict_date_optional_time"
-            },
-            {
-                "field": "event_time",
-                "format": "strict_date_optional_time"
             }
         ],
         "size": 500,
@@ -106,7 +102,7 @@ pub async fn keyword_search(
                     .and_then(|arr| arr.get(0))
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
-                let message = hit["fields"]["message"]
+                let message = hit["fields"]["event.original"]
                     .as_array()
                     .and_then(|arr| arr.get(0))
                     .and_then(|v| v.as_str())

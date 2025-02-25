@@ -29,6 +29,7 @@ const LogSearch = () => {
     const [results, setResults] = useState([]);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
+
     const [contextData, setContextData] = useState([]);
 
     useEffect(() => {
@@ -97,17 +98,7 @@ const LogSearch = () => {
     const splitLogMessage = (logMessage) => {
         // Split the log message into words (split by spaces)
         const words = logMessage.split(" ");
-
-        // Calculate the middle index of the words array
-        const middleIndex = Math.floor(words.length / 2);
-
-        // Define the range around the middle index that you want to extract (for example, 2 words before and 2 words after)
-        const rangeStart = Math.max(middleIndex - 2, 0); // Ensure start index is not negative
-        const rangeEnd = Math.min(middleIndex + 2, words.length - 1); // Ensure end index is within bounds
-
-        // Slice the array from rangeStart to rangeEnd (inclusive)
         const selectedWords = words.slice(0, 4);
-
         // Join the selected words back into a string
         return selectedWords.join(" ");
     }
@@ -199,8 +190,7 @@ const LogSearch = () => {
 
     return (
         <div className="log-search-container" style={{width: '100%'}}>
-            <Col style={{width: '250px',marginBottom: 25}}>
-                {/*<DateRangePicker onDateChange={handleDateChange}/>*/}
+            <Col style={{width: '250px', marginBottom: 25}}>
                 <Button type="primary" onClick={refreshElasticSearch}>RefreshElastic</Button>
             </Col>
 
@@ -275,13 +265,13 @@ const LogSearch = () => {
                     itemLayout="horizontal"
                     dataSource={results}
                     renderItem={item => (
-                        <List.Item style={{fontSize: '12px', padding: '8px'}}
+                        <List.Item style={{fontSize: '12px', padding: '2px'}}
                                    onClick={() => handleContextClick(item)}>
                             <List.Item.Meta
                                 title={
                                     <Tooltip
                                         title={`file_name: ${item.file_name} \nHostname: ${item.hostname} \nTimestamp: ${item.timestamp}`}>
-                                        <Text strong>{item.message.replace(/"/g, "")}</Text>
+                                        <Text style={{fontSize: '12px'}}>{item.message.replace(/"/g, "")}</Text>
                                     </Tooltip>
                                 }
                             />
@@ -289,7 +279,7 @@ const LogSearch = () => {
                     )}
                 />
             </div>
-            <ContextDisplay contextData={contextData}/>
+            <ContextDisplay contextData={contextData} title="log context"/>
         </div>
     );
 };

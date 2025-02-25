@@ -2,6 +2,7 @@ import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
 import { Select, Button, Row, Col, Typography, Popover, Tag, message, Input, List} from 'antd';
 import './LogSearch.css'; // Custom styles
+import ContextDisplay from "./ContextDisplay"; // 导入 ContextDisplay 组件
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -279,20 +280,7 @@ const SelectLogFile = () => {
                     </Button>
                 </Col>
             </Row>
-
-            {/* Displaying server response below */}
-            <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <Text>Server Response:</Text>
-                {/* Display each line of the server response as a list item */}
-                <List
-                    dataSource={serverResponse.split('\n')}
-                    renderItem={(item, index) => (
-                        <List.Item key={index}>
-                            <Text>{item}</Text>
-                        </List.Item>
-                    )}
-                />
-            </div>
+            <ContextDisplay contextData={serverResponse} title="result"/>
         </div>
     );
 };
