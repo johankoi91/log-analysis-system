@@ -9,7 +9,6 @@ use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
 use routes::{search, context, unique_services, get_indices, discover_node, logstash_noty,keyword_search};
 use env_logger;
-// use serde_json::Value::String;
 use crate::config::read_config;
 
 #[actix_web::main]
@@ -23,7 +22,7 @@ async fn main() -> std::io::Result<()> {
             es_ip  = config.connect_ips.elasticsearch.clone();
         }
         Err(e) => {
-            eprintln!("Error reading config: {}", e);
+            info!("Error reading config: {}", e);
             return Ok(())
         }
     }
@@ -56,7 +55,7 @@ async fn main() -> std::io::Result<()> {
             .configure(logstash_noty::init_routes)
             .configure(keyword_search::init_routes)
     })
-        .bind("127.0.0.1:8080")?
+        .bind("0.0.0.0:8080")?
         .run()
         .await
 }

@@ -31,13 +31,15 @@ const LogSearch = () => {
     const [endTime, setEndTime] = useState("");
     const [contextData, setContextData] = useState("");
 
+    const API_BASE_URL = "http://10.62.0.93:8080"
+
     useEffect(() => {
         refreshElasticSearch();
     }, []);
 
     const fetchFieldOptions = (field) => {
         setFilterLoading(true);
-        axios.get(`http://localhost:8080/indices?index_pattern=${es_index}&field=${field}`)
+        axios.get(`${API_BASE_URL}/indices?index_pattern=${es_index}&field=${field}`)
             .then(response => {
                 const fieldName = field.split('.')[0];
                 setAvailableFilters(prevFilters => ({
@@ -73,7 +75,7 @@ const LogSearch = () => {
         }
 
         // 调用 API 搜索，传递 es_index 代替 selectedIndex
-        axios.post("http://localhost:8080/keyword_search", {
+        axios.post(`${API_BASE_URL}/keyword_search`, {
             keyword: searchQuery,
             es_index: es_index,  // 传递 es_index
         }).then(response => {
@@ -83,7 +85,7 @@ const LogSearch = () => {
 
     const refreshElasticSearch = () => {
         setLoading(true);
-        axios.get("http://localhost:8080/get_indices")
+        axios.get(`${API_BASE_URL}/get_indices`)
             .then(response => {
                 const indexList = response.data.indices;
                 setIndices(indexList);

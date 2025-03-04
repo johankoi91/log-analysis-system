@@ -6,6 +6,7 @@ import ContextDisplay from "./ContextDisplay"; // 导入 ContextDisplay 组件
 
 const { Option } = Select;
 const { Text } = Typography;
+const API_BASE_URL = "http://10.62.0.93:8080"
 
 const SelectLogFile = () => {
     // Ref to hold WebSocket connection
@@ -42,7 +43,7 @@ const SelectLogFile = () => {
 
     // Fetching the filter data from discover_node and setting filterData
     useEffect(() => {
-        axios.get("http://localhost:8080/discover_node")
+        axios.get(`${API_BASE_URL}/discover_node`)
             .then(response => {
                 setFilterData(response.data);
 
