@@ -1,3 +1,4 @@
+use std::array;
 use futures::future::join_all;
 use actix_web::{web, Responder};
 use async_tungstenite::tokio::connect_async;
@@ -8,7 +9,7 @@ use serde_json::{json, Value};
 use tokio::sync::{broadcast, Mutex};
 use std::sync::Arc;
 use tokio::time::{timeout, Duration};
-use std::collections::HashMap;
+use crate::config::read_config;
 
 struct WebSocketClient {
     sender: Arc<Mutex<broadcast::Sender<Value>>>, // Sender 用于发送消息
@@ -37,7 +38,6 @@ impl WebSocketClient {
 
                 // 启动一个任务来处理 WebSocket 的接收
                 let sender_clone = Arc::clone(&sender);
-                let receiver_clone = Arc::clone(&receiver);
                 tokio::spawn(async move {
                     while let Some(msg) = read.next().await {
                         match msg {
@@ -87,35 +87,40 @@ impl WebSocketClient {
 }
 
 pub async fn discover_node() -> impl Responder {
-    let urls = vec![
-        "127.0.0.1:9002",
-        "10.62.0.84:9002",
-    ];
+    let mut log_ips = vec![];
+    match read_config() {
+        Ok(config) => {
+            log_ips = config.connect_ips.log_source_edges.clone();
+        }
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return Err(e);
+        }
+    }
 
     // 创建一个 `Mutex` 来确保安全地共享合并结果
     let combined_data = Arc::new(Mutex::new(json!({})));
+    let timeout_duration = Duration::from_secs(2);
 
     // 创建任务列表并发起所有 WebSocket 请求
-    let tasks: Vec<_> = urls.into_iter().map(|url| {
+    let tasks: Vec<_> = log_ips.into_iter().map(|url| {
         let combined_data = Arc::clone(&combined_data); // 克隆 `Arc` 对象，确保任务间共享
-
         tokio::spawn(async move {
-            let result = match WebSocketClient::connect(url).await {
-                Ok(client) => match client.get_log_source().await {
-                    Some(valid_data) => Some(valid_data),
-                    None => None,
-                },
-                Err(e) => {
-                    info!("WebSocketClient::connect fail: {}",e);
-                    None
+            match timeout(timeout_duration, WebSocketClient::connect(&url)).await {
+                Ok(Ok(client)) => {
+                    if let Some(valid_data) = client.get_log_source().await {
+                        let mut combined_data_lock = combined_data.lock().await;
+                        combined_data_lock[url] = valid_data; // Store the result in combined_data
+                    } else {
+                        info!("No valid data received for {}", url);
+                    }
                 }
-            };
-
-            if let Some(data) = result {
-                let mut combined_data_lock = combined_data.lock().await;
-                combined_data_lock[url] = data; // 将结果放入 `combined_data`
-            } else {
-                info!("WebSocketClient::connect fail");
+                Ok(Err(e)) => {
+                    info!("WebSocketClient::connect failed for {}: {}", url, e);
+                }
+                Err(_) => {
+                    info!("WebSocketClient::connect timed out for {}", url);
+                }
             }
         })
     }).collect();
@@ -125,7 +130,7 @@ pub async fn discover_node() -> impl Responder {
 
     // 获取并返回合并后的结果
     let combined_data_lock = combined_data.lock().await;
-    web::Json(combined_data_lock.clone())  // 返回合并的 JSON 数据
+    Ok(web::Json(combined_data_lock.clone()))
 }
 
 // 注册路由

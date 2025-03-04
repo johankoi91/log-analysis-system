@@ -1,0 +1,8 @@
+# JVM heap options
+-Xms2g
+-Xmx2g
+
+# Other JVM options
+-XX:+HeapDumpOnOutOfMemoryError
+-Dlog4j2.isThreadContextMapInheritable=true
+-Dfile.encoding=UTF-8

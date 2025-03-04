@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  rust-logstash:
+    build:
+      context: .  # Use the current directory for building the Docker image
+      dockerfile: Dockerfile  # Optional: If you have a specific Dockerfile name
+    container_name: rust-logstash
+    ports:
+      - "9600:9600"  # Expose Logstash monitoring API
+      - "5044:5044"  # Expose Logstash Beats input
+    volumes:
+      - ./logstash-docker/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./logstash-docker/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash-docker/jvm.options:/usr/share/logstash/config/jvm.options:ro
+      - ./config:/usr/src/logs_filter/config  # Mount Rust app config
+    environment:
+      - LOG_FILE_PATH=/usr/src/logs_filter/config/config.yaml
+    networks:
+      - log_network
+    command: ["/start.sh"]  # Command to start the app and Logstash
+
+networks:
+  log_network:
+    driver: bridge

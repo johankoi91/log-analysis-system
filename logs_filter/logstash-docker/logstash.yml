@@ -1,0 +1,22 @@
+# 设置 Logstash 实例的路径配置
+path.data: "/usr/share/logstash/data"  # 数据路径
+path.logs: "/usr/share/logstash/logs"  # 日志路径
+path.config: "/usr/share/logstash/pipeline"  # 配置文件路径
+
+# 启用和配置监控
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch.hosts: ["http://localhost:9200"]  # 设置监控的 Elasticsearch 地址
+
+# 配置 API 接口
+api.http.host: "0.0.0.0"  # 启用 API，监听所有网络接口
+api.http.port: 9600  # 配置 API 端口
+
+# 配置内存管理
+pipeline.batch.size: 500         # 设置每个批次的最大事件数
+pipeline.batch.delay: 3         # 设置等待 5 秒刷新批次
+# flush_interval: 1          # 每秒刷新一次
+ # workers => 2  # 设置使用2个线程并行处理数据  
+
+
+# 配置日志级别
+log.level: info  # 设置 Logstash 的日志级别

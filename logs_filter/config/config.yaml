@@ -1,0 +1,4 @@
+connect_ips:
+  elasticsearch: http://10.62.0.93:9200
+  log_source_edges:
+    - 10.62.0.84:9002

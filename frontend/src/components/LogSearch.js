@@ -29,8 +29,7 @@ const LogSearch = () => {
     const [results, setResults] = useState([]);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
-
-    const [contextData, setContextData] = useState([]);
+    const [contextData, setContextData] = useState("");
 
     useEffect(() => {
         refreshElasticSearch();

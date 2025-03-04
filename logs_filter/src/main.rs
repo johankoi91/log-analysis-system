@@ -1,4 +1,5 @@
 mod routes;
+mod config;
 
 use crate::env_logger::Env;
 use log::info;
@@ -8,21 +9,33 @@ use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
 use routes::{search, context, unique_services, get_indices, discover_node, logstash_noty,keyword_search};
 use env_logger;
+// use serde_json::Value::String;
+use crate::config::read_config;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // 初始化日志记录
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
+    let mut es_ip = String::new();
+    match read_config() {
+        Ok(config) => {
+            es_ip  = config.connect_ips.elasticsearch.clone();
+        }
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return Ok(())
+        }
+    }
+
     info!("Starting Actix Web server...");
-    let transport = Transport::single_node("http://10.62.0.93:9200").unwrap();
+    let transport = Transport::single_node(es_ip.as_str()).unwrap();
     let es_client = Elasticsearch::new(transport);
-    let data_es_client = web::Data::new(es_client);  // 使用 `Data::new` 包装客户端
+    let data_es_client = web::Data::new(es_client);
 
     HttpServer::new(move || {
         App::new()
             .app_data(data_es_client.clone())
-            // .app_data(data_wx_client.clone())
             // 添加 CORS 配置
             .wrap(
                 Cors::default()
@@ -35,7 +48,6 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_header()
                     .max_age(3600), // 缓存预检请求的时间（秒）
             )
-            // .route("/ws", web::get().to(websocket_entry)) // 注册 WebSocket 端点
             .configure(search::init_routes)
             .configure(context::init_routes)
             .configure(unique_services::init_routes)

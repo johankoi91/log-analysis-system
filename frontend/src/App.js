@@ -21,7 +21,7 @@ function App() {
                     style={{ height: '100%', borderRight: 0 }}
                     onClick={handleMenuClick}
                 >
-                    <Menu.Item key="LogFileSelect">Log File Select</Menu.Item>
+                    <Menu.Item key="LogFileSelect">Log File Operation</Menu.Item>
                     <Menu.Item key="LogSearch">Log Search</Menu.Item>
                 </Menu>
             </Sider>

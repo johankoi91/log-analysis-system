@@ -22,15 +22,15 @@ pub async fn get_log_context(
         "query": {
             "bool": {
                 "filter": [
-                    // {
-                    //     "range": {
-                    //         "@timestamp": {
-                    //             "gte": request.start_time,
-                    //             "lte": request.end_time,
-                    //             "format": "strict_date_optional_time"  // 时间格式
-                    //         }
-                    //     }
-                    // },
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": request.start_time,
+                                "lte": request.end_time,
+                                "format": "strict_date_optional_time"  // 时间格式
+                            }
+                        }
+                    },
                     {
                         "match_phrase": {
                             "_index": request.es_index  // 索引名筛选

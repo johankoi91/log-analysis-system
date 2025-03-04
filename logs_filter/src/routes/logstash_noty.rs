@@ -1,13 +1,12 @@
 use actix_web::{web, Responder};
-use elasticsearch::{Elasticsearch, SearchParts};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-#[derive(Deserialize)]
-pub struct SearchRequest {
-    // file_name: String,
-    upload_status: String,
-}
+// #[derive(Deserialize)]
+// pub struct SearchRequest {
+//     file_name: String,
+//     upload_status: String,
+// }
 
 
 pub async fn logstash_noty(
