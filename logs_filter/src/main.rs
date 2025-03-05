@@ -1,9 +1,11 @@
 mod routes;
 mod config;
 
+use std::env;
 use crate::env_logger::Env;
 use log::info;
 use actix_web::{web, App, HttpServer};
+use actix_files::Files;
 use actix_cors::Cors;
 use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
@@ -32,6 +34,10 @@ async fn main() -> std::io::Result<()> {
     let es_client = Elasticsearch::new(transport);
     let data_es_client = web::Data::new(es_client);
 
+    let current_dir = env::current_dir().unwrap();
+    let build_path = format!("{}/build", current_dir.display());
+    let static_path = format!("{}/build/static", current_dir.display());
+
     HttpServer::new(move || {
         App::new()
             .app_data(data_es_client.clone())
@@ -47,6 +53,8 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_header()
                     .max_age(3600), // 缓存预检请求的时间（秒）
             )
+            .service(Files::new("/static", &static_path).show_files_listing())
+            .service(Files::new("/admin", &build_path).index_file("index.html"))
             .configure(search::init_routes)
             .configure(unique_services::init_routes)
             .configure(get_indices::init_routes)
