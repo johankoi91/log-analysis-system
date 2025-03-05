@@ -1,4 +1,3 @@
-use std::array;
 use futures::future::join_all;
 use actix_web::{web, Responder};
 use async_tungstenite::tokio::connect_async;
@@ -23,7 +22,7 @@ impl WebSocketClient {
         let ws_url = format!("ws://{}", url);
         match timeout(connect_timeout, connect_async(ws_url)).await {
             Ok(Ok((ws_stream, response))) => {
-                println!("Connected to server with status: {}", response.status());
+                info!("Connected to server with status: {}", response.status());
 
                 let (mut write, mut read) = ws_stream.split();
                 let send_text = "get_log_source".to_string();
@@ -50,13 +49,13 @@ impl WebSocketClient {
                                 }
                             }
                             Ok(Message::Binary(bin)) => {
-                                println!("Received binary: {:?}", bin);
+                                info!("Received binary: {:?}", bin);
                             }
                             Ok(Message::Close(frame)) => {
-                                println!("Received close message: {:?}", frame);
+                                info!("Received close message: {:?}", frame);
                             }
                             _ => {
-                                println!("Received other type of message");
+                                info!("Received other type of message");
                             }
                         }
                     }
@@ -93,7 +92,7 @@ pub async fn discover_node() -> impl Responder {
             log_ips = config.connect_ips.log_source_edges.clone();
         }
         Err(e) => {
-            eprintln!("Error reading config: {}", e);
+            info!("Error reading config: {}", e);
             return Err(e);
         }
     }

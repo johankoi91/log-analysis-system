@@ -2,6 +2,7 @@ use actix_web::{web, Responder};
 use serde::Deserialize;
 use elasticsearch::{Elasticsearch, SearchParts};
 use serde_json::json;
+use log::info;
 
 #[derive(Deserialize)]
 pub struct SearchParams {
@@ -55,7 +56,7 @@ pub async fn get_unique_services(
                 })
                 .collect::<Vec<String>>();                  // 收集所有 key 到 Vec
 
-            println!("Unique services: {:?}", unique_services);
+            info!("Unique services: {:?}", unique_services);
 
             // 返回唯一服务（hostname.keyword）列表
             web::Json(json!({ "unique_services": unique_services }))

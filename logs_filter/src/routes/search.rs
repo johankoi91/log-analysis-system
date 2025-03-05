@@ -25,7 +25,7 @@ pub async fn search_logs(
         "sort": [
             {
                 "@timestamp": {
-                    "order": "asc",
+                    "order": "desc",
                     "unmapped_type": "boolean"
                 }
             }

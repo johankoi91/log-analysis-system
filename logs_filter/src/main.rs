@@ -7,7 +7,7 @@ use actix_web::{web, App, HttpServer};
 use actix_cors::Cors;
 use elasticsearch::{Elasticsearch};
 use elasticsearch::http::transport::Transport;
-use routes::{search, context, unique_services, get_indices, discover_node, logstash_noty,keyword_search};
+use routes::{search, unique_services, get_indices, discover_node,keyword_search};
 use env_logger;
 use crate::config::read_config;
 
@@ -48,11 +48,9 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600), // 缓存预检请求的时间（秒）
             )
             .configure(search::init_routes)
-            .configure(context::init_routes)
             .configure(unique_services::init_routes)
             .configure(get_indices::init_routes)
             .configure(discover_node::init_routes)
-            .configure(logstash_noty::init_routes)
             .configure(keyword_search::init_routes)
     })
         .bind("0.0.0.0:8080")?

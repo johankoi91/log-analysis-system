@@ -102,8 +102,8 @@ const SelectLogFile = () => {
         const filterContent = [
             filters.hostname ? `hostname: ${filters.hostname}` : '',
             filters.service ? `service: ${filters.service}` : '',
-            filters.basename ? `basename: ${filters.basename}` : '',
-            filters.dir ? `dir: ${filters.dir}` : '',
+            filters.basename ? `filename: ${filters.dir}${filters.basename}` : '',
+            // filters.dir ? `dir: ${filters.dir}` : '',
         ]
             .filter(Boolean)
             .join(" AND ");
