@@ -9,8 +9,6 @@ services:
     image: logs_filter:latest
     container_name: logs_filter
     restart: unless-stopped
-    ports:
-      - "8080:8080"
     network_mode: "host"
     environment:
       - CONFIG_FILE_PATH=/usr/src/logs_filter/config/config.yaml
@@ -20,3 +18,46 @@ services:
     command: ["/start.sh"]
     stdin_open: true
     tty: true
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - elk_network
+    volumes:
+      - ../../es-data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.2
+    container_name: kibana
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - elk_network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.17.0
+    container_name: logstash
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    network_mode: "host"
+    volumes:
+      - ./logstash-docker/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./logstash-docker/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash-docker/jvm.options:/usr/share/logstash/config/jvm.options:ro
+
+networks:
+  elk_network:

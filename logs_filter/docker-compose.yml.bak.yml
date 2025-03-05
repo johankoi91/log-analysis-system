@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  logs_filter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    image: logs_filter:latest
+    container_name: logs_filter
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    network_mode: "host"
+    environment:
+      - CONFIG_FILE_PATH=/usr/src/logs_filter/config/config.yaml
+    volumes:
+      - ./config:/usr/src/logs_filter/config:ro
+    user: root
+    command: ["/start.sh"]
+    stdin_open: true
+    tty: true
