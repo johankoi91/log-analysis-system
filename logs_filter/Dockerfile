@@ -17,6 +17,9 @@ FROM --platform=linux/amd64 ubuntu:24.04
 # 复制构建好的 Rust 可执行文件到容器
 COPY --from=builder /usr/src/logs_filter/target/release/logs_filter /usr/local/bin/
 
+# **复制前端打包的静态文件**
+COPY ./build /build
+
 # 设置 CONFIG_FILE_PATH 环境变量
 COPY ./config /usr/src/logs_filter/config
 ENV CONFIG_FILE_PATH="/usr/src/logs_filter/config/config.yaml"
