@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import LogSearch from './components/LogSearch';
-import SelectLogFile from './components/SelectLogFile';
+import SelectLogFile from './components/LogFileOperation';
 import { Layout, Menu } from 'antd';
 
 const { Sider, Content } = Layout;
 
 function App() {
-    const [activePage, setActivePage] = useState('LogFileSelect'); // Default to 'LogFileSelect'
+    const [activePage, setActivePage] = useState('LogFileOperation');
 
     const handleMenuClick = (e) => {
         setActivePage(e.key);
@@ -21,7 +21,7 @@ function App() {
                     style={{ height: '100%', borderRight: 0 }}
                     onClick={handleMenuClick}
                 >
-                    <Menu.Item key="LogFileSelect">Log File Operation</Menu.Item>
+                    <Menu.Item key="LogFileOperation">Log File Operation</Menu.Item>
                     <Menu.Item key="LogSearch">Log Search</Menu.Item>
                 </Menu>
             </Sider>
@@ -34,7 +34,7 @@ function App() {
                     }}
                 >
                     {/* Use visibility and display to control the visibility of components */}
-                    <div style={{ display: activePage === 'LogFileSelect' ? 'block' : 'none' }}>
+                    <div style={{ display: activePage === 'LogFileOperation' ? 'block' : 'none' }}>
                         <SelectLogFile />
                     </div>
                     <div style={{ display: activePage === 'LogSearch' ? 'block' : 'none' }}>
