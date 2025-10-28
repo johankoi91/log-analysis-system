@@ -4,8 +4,8 @@ path.logs: "/usr/share/logstash/logs"  # 日志路径
 path.config: "/usr/share/logstash/pipeline"  # 配置文件路径
 
 # 启用和配置监控
-xpack.monitoring.enabled: true
-xpack.monitoring.elasticsearch.hosts: ["http://localhost:9200"]  # 设置监控的 Elasticsearch 地址
+# xpack.monitoring.enabled: true
+# xpack.monitoring.elasticsearch.hosts: ["http://localhost:9200"]  # 设置监控的 Elasticsearch 地址
 
 # 配置 API 接口
 api.http.host: "0.0.0.0"  # 启用 API，监听所有网络接口

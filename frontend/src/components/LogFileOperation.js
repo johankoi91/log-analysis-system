@@ -6,7 +6,7 @@ import ContextDisplay from "./ContextDisplay"; // 导入 ContextDisplay 组件
 
 const { Option } = Select;
 const { Text } = Typography;
-const API_BASE_URL = "http://10.62.0.93:8080"
+const API_BASE_URL = "http://127.0.0.1:8080"
 
 const LogFileOperation = () => {
     // Ref to hold WebSocket connection

@@ -31,7 +31,7 @@ const LogSearch = () => {
     const [endTime, setEndTime] = useState("");
     const [contextData, setContextData] = useState("");
 
-    const API_BASE_URL = "http://10.62.0.93:8080"
+    const API_BASE_URL = "http://127.0.0.1:8080"
 
     useEffect(() => {
         refreshElasticSearch();

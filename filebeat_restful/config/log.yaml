@@ -1,7 +1,7 @@
 log_inputs:
   - service_type: RTC
     path:
-      - /var/log/agora/
+      - /Users/hanxiaoqing/var/log/agora/
   - service_type: RTM
     path:
       - /var/log/RTM/

@@ -2,7 +2,7 @@
   id: RTC
   enabled: true
   paths:
-  - /var/log/agora/67ab22aea6eb2a0001f426acv33VtBqzr.txt
+  - /var/log/agora/*
   fields:
     service: RTC
     hostname: localhost:9002
